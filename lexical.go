@@ -13,7 +13,6 @@ const (
 	TModule                 = 1
 	TVariable               = 3
 	TComma                  = 4
-	TSemiColon              = 5
 	TIf                     = 6
 	TElse                   = 7
 	TElseIf                 = 8
@@ -21,12 +20,12 @@ const (
 	TBreak                  = 11
 	TOpenParentheses        = 16
 	TCloseParentheses       = 17
-	TGreaterThan            = 19
-	TLessThan               = 20
-	TGreaterEqual           = 21
-	TLessEqual              = 22
-	TEqual                  = 23
-	TNotEqual               = 24
+	TGreaterThanOperator    = 19
+	TLessThanOperator       = 20
+	TGreaterEqualOperator   = 21
+	TLessEqualOperator      = 22
+	TEqualOperator          = 23
+	TNotEqualOperator       = 24
 	TAdditionOperator       = 25
 	TSubtractionOperator    = 26
 	TMultiplicationOperator = 27
@@ -79,8 +78,8 @@ func (lex *Lexical) GetToken(inputFile string) (string, error) {
 	lex.movelookAhead()
 
 	for lex.token != TInputEnd && lex.token != TLexError {
-		lex.buscaProximoToken()
-		lex.mostraToken()
+		lex.nextToken()
+		lex.displayToken()
 	}
 
 	if lex.token == TLexError {
@@ -91,6 +90,8 @@ func (lex *Lexical) GetToken(inputFile string) (string, error) {
 
 	lex.exibeTokens()
 	lex.gravaSaida()
+
+	return lex.lexeme, nil
 }
 
 func (lex *Lexical) movelookAhead() error {
@@ -115,7 +116,7 @@ func (lex *Lexical) movelookAhead() error {
 	return nil
 }
 
-func (lex *Lexical) buscaProximoToken() error {
+func (lex *Lexical) nextToken() error {
 	var sbLexema strings.Builder
 
 	for lex.lookAhead == ' ' || lex.lookAhead == '\t' || lex.lookAhead == '\n' || lex.lookAhead == '\r' {
@@ -194,11 +195,11 @@ func (lex *Lexical) buscaProximoToken() error {
 		case '%':
 			lex.token = TModuleOperator
 		case '<':
-			lex.token = TLessThan
+			lex.token = TLessThanOperator
 		case '>':
-			lex.token = TGreaterThan
+			lex.token = TGreaterThanOperator
 		case '=':
-			lex.token = TEqual
+			lex.token = TEqualOperator
 		case EOF:
 			lex.token = TInputEnd
 		default:
@@ -213,84 +214,70 @@ func (lex *Lexical) buscaProximoToken() error {
 	return nil
 }
 
-func (lex *Lexical) mostraToken() {
-	var tokenLexema string
+func (lex *Lexical) displayToken() {
+	var tokenLexeme string
 	switch lex.token {
 	case TModule:
-		tokenLexema = "T_PROGRAMA"
-	case TEnd:
-		tokenLexema = "T_FIM"
+		tokenLexeme = "T_MODULE"
 	case TVariable:
-		tokenLexema = "T_VARIAVEIS"
+		tokenLexeme = "T_VARIABLE"
 	case TComma:
-		tokenLexema = "T_VIRGULA"
-	case TSemiColon:
-		tokenLexema = "T_PONTO_VIRGULA"
+		tokenLexeme = "T_COMMA"
 	case TIf:
-		tokenLexema = "T_SE"
+		tokenLexeme = "T_IF"
 	case TElse:
-		tokenLexema = "T_SENAO"
-	case TEndIf:
-		tokenLexema = "T_FIM_SE"
+		tokenLexeme = "T_ELSE"
+	case TElseIf:
+		tokenLexeme = "T_ELSE_IF"
 	case TFor:
-		tokenLexema = "T_ENQUANTO"
-	case TEndWhile:
-		tokenLexema = "T_FIM_ENQUANTO"
+		tokenLexeme = "T_FOR"
 	case TBreak:
-		tokenLexema = "T_PARA"
-	case TArrow:
-		tokenLexema = "T_SETA"
-	case TAte:
-		tokenLexema = "T_ATE"
-	case TFimPara:
-		tokenLexema = "T_FIM_PARA"
-	case TLer:
-		tokenLexema = "T_LER"
+		tokenLexeme = "T_BREAK"
 	case TOpenParentheses:
-		tokenLexema = "T_ABRE_PAR"
+		tokenLexeme = "T_OPEN_PARENTHESES"
 	case TCloseParentheses:
-		tokenLexema = "T_FECHA_PAR"
-	case TEscrever:
-		tokenLexema = "T_ESCREVER"
-	case TGreaterThan:
-		tokenLexema = "T_MAIOR"
-	case TLessThan:
-		tokenLexema = "T_MENOR"
-	case TGreaterEqual:
-		tokenLexema = "T_MAIOR_IGUAL"
-	case TLessEqual:
-		tokenLexema = "T_MENOR_IGUAL"
-	case TEqual:
-		tokenLexema = "T_IGUAL"
-	case TNotEqual:
-		tokenLexema = "T_DIFERENTE"
+		tokenLexeme = "T_CLOSE_PARENTHESES"
+	case TGreaterThanOperator:
+		tokenLexeme = "T_GREATER_THAN_OPERATOR"
+	case TLessThanOperator:
+		tokenLexeme = "T_LESS_THAN_OPERATOR"
+	case TGreaterEqualOperator:
+		tokenLexeme = "T_GREATER_EQUAL_OPERATOR"
+	case TLessEqualOperator:
+		tokenLexeme = "T_LESS_EQUAL_OPERATOR"
+	case TEqualOperator:
+		tokenLexeme = "T_EQUAL_OPERATOR"
+	case TNotEqualOperator:
+		tokenLexeme = "T_NOT_EQUAL_OPERATOR"
 	case TAdditionOperator:
-		tokenLexema = "T_MAIS"
+		tokenLexeme = "T_ADDITION_OPERATOR"
 	case TSubtractionOperator:
-		tokenLexema = "T_MENOS"
+		tokenLexeme = "T_SUBTRACTION_OPERATOR"
 	case TMultiplicationOperator:
-		tokenLexema = "T_VEZES"
+		tokenLexeme = "T_MULTIPLICATION_OPERATOR"
 	case TDivisionOperator:
-		tokenLexema = "T_DIVIDIDO"
+		tokenLexeme = "T_DIVISION_OPERATOR"
 	case TModuleOperator:
-		tokenLexema = "T_RESTO"
+		tokenLexeme = "T_MODULE_OPERATOR"
 	case TExponentiationOperator:
-		tokenLexema = "T_ELEVADO"
+		tokenLexeme = "T_EXPONENTIATION_OPERATOR"
 	case TInteger:
-		tokenLexema = "T_NUMERO"
+		tokenLexeme = "T_INTEGER"
+	case TFLoat:
+		tokenLexeme = "T_FLOAT"
 	case TId:
-		tokenLexema = "T_ID"
+		tokenLexeme = "T_ID"
 	case TInputEnd:
-		tokenLexema = "T_FIM_FONTE"
+		tokenLexeme = "T_INPUT_END"
 	case TLexError:
-		tokenLexema = "T_ERRO_LEX"
+		tokenLexeme = "T_LEX_ERROR"
 	case TNil:
-		tokenLexema = "T_NULO"
+		tokenLexeme = "T_NIL"
 	default:
-		tokenLexema = "N/A"
+		tokenLexeme = "N/A"
 	}
-	fmt.Println(tokenLexema + " ( " + lex.lexeme + " )")
-	lex.acumulaToken(tokenLexema + " ( " + lex.lexeme + " )")
+	fmt.Println(tokenLexeme + " ( " + lex.lexeme + " )")
+	lex.acumulaToken(tokenLexeme + " ( " + lex.lexeme + " )")
 }
 
 func (lex *Lexical) open(fileName string) error {
