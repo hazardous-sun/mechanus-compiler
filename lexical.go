@@ -88,8 +88,8 @@ func (lex *Lexical) GetToken(inputFile string) (string, error) {
 		fmt.Println("Análise Léxica terminada sem erros léxicos")
 	}
 
-	lex.exibeTokens()
-	lex.gravaSaida()
+	lex.showTokens()
+	lex.writeOutput()
 
 	return lex.lexeme, nil
 }
@@ -117,102 +117,102 @@ func (lex *Lexical) movelookAhead() error {
 }
 
 func (lex *Lexical) nextToken() error {
-	var sbLexema strings.Builder
+	var sbLexeme strings.Builder
 
 	for lex.lookAhead == ' ' || lex.lookAhead == '\t' || lex.lookAhead == '\n' || lex.lookAhead == '\r' {
 		lex.movelookAhead()
 	}
 
 	if lex.lookAhead >= 'A' && lex.lookAhead <= 'Z' {
-		sbLexema.WriteRune(lex.lookAhead)
-		lex.movelookAhead()
-
-		for (lex.lookAhead >= 'A' && lex.lookAhead <= 'Z') || (lex.lookAhead >= '0' && lex.lookAhead <= '9') || lex.lookAhead == '_' {
-			sbLexema.WriteRune(lex.lookAhead)
-			lex.movelookAhead()
-		}
-
-		lex.lexeme = sbLexema.String()
-
-		switch lex.lexeme {
-		case "PROGRAMA":
-			lex.token = TModule
-		case "FIM":
-			lex.token = TEnd
-		case "VARIAVEIS":
-			lex.token = TVariable
-		case "SE":
-			lex.token = TIf
-		case "SENAO":
-			lex.token = TElse
-		case "ELSE_IF":
-			lex.token = TElseIf
-		case "FIM_SE":
-			lex.token = TEndIf
-		case "ENQUANTO":
-			lex.token = TFor
-		case "FIM_ENQUANTO":
-			lex.token = TEndWhile
-		case "PARA":
-			lex.token = TBreak
-		case "ATE":
-			lex.token = TAte
-		case "FIM_PARA":
-			lex.token = TFimPara
-		case "LER":
-			lex.token = TLer
-		case "ESCREVER":
-			lex.token = TEscrever
-		default:
-			lex.token = TId
-		}
+		lex.alphabeticalCharacter(sbLexeme)
 	} else if lex.lookAhead >= '0' && lex.lookAhead <= '9' {
-		sbLexema.WriteRune(lex.lookAhead)
-		lex.movelookAhead()
-		for lex.lookAhead >= '0' && lex.lookAhead <= '9' {
-			sbLexema.WriteRune(lex.lookAhead)
-			lex.movelookAhead()
-		}
-		lex.token = TInteger
+		lex.numericalCharacter(sbLexeme)
 	} else {
-		switch lex.lookAhead {
-		case '(':
-			lex.token = TOpenParentheses
-		case ')':
-			lex.token = TCloseParentheses
-		case ';':
-			lex.token = TSemiColon
-		case ',':
-			lex.token = TComma
-		case '+':
-			lex.token = TAdditionOperator
-		case '-':
-			lex.token = TSubtractionOperator
-		case '*':
-			lex.token = TMultiplicationOperator
-		case '/':
-			lex.token = TDivisionOperator
-		case '%':
-			lex.token = TModuleOperator
-		case '<':
-			lex.token = TLessThanOperator
-		case '>':
-			lex.token = TGreaterThanOperator
-		case '=':
-			lex.token = TEqualOperator
-		case EOF:
-			lex.token = TInputEnd
-		default:
-			lex.token = TLexError
-			lex.errorMessage = fmt.Sprintf("Erro Léxico na linha: %d\nReconhecido ao atingir a coluna: %d\nLinha do Erro: <%s>\nToken desconhecido: %c", lex.currentLine, lex.currentColumn, lex.inputLine, lex.lookAhead)
-		}
-		sbLexema.WriteRune(lex.lookAhead)
+		lex.symbolCharacter(sbLexeme)
+	}
+
+	lex.lexeme = sbLexeme.String()
+	return nil
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+func (lex *Lexical) alphabeticalCharacter(sbLexeme strings.Builder) {
+	sbLexeme.WriteRune(lex.lookAhead)
+	lex.movelookAhead()
+
+	for (lex.lookAhead >= 'A' && lex.lookAhead <= 'Z') || (lex.lookAhead >= '0' && lex.lookAhead <= '9') || lex.lookAhead == '_' {
+		sbLexeme.WriteRune(lex.lookAhead)
 		lex.movelookAhead()
 	}
 
-	lex.lexeme = sbLexema.String()
-	return nil
+	lex.lexeme = sbLexeme.String()
+
+	switch lex.lexeme {
+	case "PROGRAMA":
+		lex.token = TModule
+	case "VARIAVEIS":
+		lex.token = TVariable
+	case "SE":
+		lex.token = TIf
+	case "SENAO":
+		lex.token = TElse
+	case "ELSE_IF":
+		lex.token = TElseIf
+	case "ENQUANTO":
+		lex.token = TFor
+	case "PARA":
+		lex.token = TBreak
+	default:
+		lex.token = TId
+	}
 }
+
+func (lex *Lexical) numericalCharacter(sbLexeme strings.Builder) {
+	sbLexeme.WriteRune(lex.lookAhead)
+	lex.movelookAhead()
+	for lex.lookAhead >= '0' && lex.lookAhead <= '9' {
+		sbLexeme.WriteRune(lex.lookAhead)
+		lex.movelookAhead()
+	}
+	lex.token = TInteger
+}
+
+func (lex *Lexical) symbolCharacter(sbLexeme strings.Builder) {
+	switch lex.lookAhead {
+	case '(':
+		lex.token = TOpenParentheses
+	case ')':
+		lex.token = TCloseParentheses
+	case ',':
+		lex.token = TComma
+	case '+':
+		lex.token = TAdditionOperator
+	case '-':
+		lex.token = TSubtractionOperator
+	case '*':
+		lex.token = TMultiplicationOperator
+	case '/':
+		lex.token = TDivisionOperator
+	case '%':
+		lex.token = TModuleOperator
+	case '<':
+		lex.token = TLessThanOperator
+	case '>':
+		lex.token = TGreaterThanOperator
+	case '=':
+		lex.token = TEqualOperator
+	case EOF:
+		lex.token = TInputEnd
+	default:
+		lex.token = TLexError
+		lex.errorMessage = fmt.Sprintf("Erro Léxico na linha: %d\nReconhecido ao atingir a coluna: %d\nLinha do Erro: <%s>\nToken desconhecido: %c", lex.currentLine, lex.currentColumn, lex.inputLine, lex.lookAhead)
+	}
+	sbLexeme.WriteRune(lex.lookAhead)
+	lex.movelookAhead()
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (lex *Lexical) displayToken() {
 	var tokenLexeme string
@@ -277,7 +277,7 @@ func (lex *Lexical) displayToken() {
 		tokenLexeme = "N/A"
 	}
 	fmt.Println(tokenLexeme + " ( " + lex.lexeme + " )")
-	lex.acumulaToken(tokenLexeme + " ( " + lex.lexeme + " )")
+	lex.storeTokens(tokenLexeme + " ( " + lex.lexeme + " )")
 }
 
 func (lex *Lexical) open(fileName string) error {
@@ -317,9 +317,10 @@ func (lex *Lexical) close(file string) error {
 	return nil
 }
 
-func (lex *Lexical) gravaSaida() error {
+func (lex *Lexical) writeOutput() error {
 	if lex.outputFile == nil {
-		return fmt.Errorf("Nome de Arquivo Inválido")
+
+		return fmt.Errorf(custom_errors.UninitializedFile)
 	}
 	file, err := os.Create("output.txt")
 	if err != nil {
@@ -335,12 +336,12 @@ func (lex *Lexical) gravaSaida() error {
 	return nil
 }
 
-func (lex *Lexical) exibeTokens() {
-	fmt.Println("Tokens Identificados (token/lexeme):")
+func (lex *Lexical) showTokens() {
+	fmt.Println("Identified Tokens (token/lexeme):")
 	fmt.Println(lex.identifiedTokens.String())
 }
 
-func (lex *Lexical) acumulaToken(tokenIdentificado string) {
+func (lex *Lexical) storeTokens(tokenIdentificado string) {
 	lex.identifiedTokens.WriteString(tokenIdentificado)
 	lex.identifiedTokens.WriteString("\n")
 }
