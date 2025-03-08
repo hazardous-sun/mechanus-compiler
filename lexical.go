@@ -9,51 +9,53 @@ import (
 	"strings"
 )
 
-// Constants for token types
+// Constants for token values
 const (
 	//	 Construction tokens
 
-	TConstruct      = 1 // "Construct"
-	TDefineFunction = 2 // "Architect"
-	TReturn         = 3 // "Integrate"
-	TComma          = 4 // ","
-	TColom          = 5 // ":"
+	TConstruct      = 1
+	TDefineFunction = 2
+	TReturn         = 3
+	TComma          = 4
+	TColom          = 5
 
 	//	 Conditional and repetition tokens
 
-	TIf    = 101 // "if"
-	TElse  = 102 // "else"
-	TElif  = 103 // "elif"
-	TFor   = 104 // "for"
-	TBreak = 105 // "detach"
+	TIf    = 101
+	TElse  = 102
+	TElif  = 103
+	TFor   = 104
+	TBreak = 105
 
 	//	 Structure tokens
 
-	TOpenParentheses       = 201 // "("
-	TCloseParentheses      = 202 // ")"
-	TOpenBraces            = 203 // "{"
-	TCloseBraces           = 204 // "}"
-	TSingleLineComment     = 205 // "//"
-	TOpenMultilineComment  = 206 // "/*"
-	TCloseMultilineComment = 207 // "*/"
+	TOpenParentheses       = 201
+	TCloseParentheses      = 202
+	TOpenBraces            = 203
+	TCloseBraces           = 204
+	TSingleLineComment     = 205
+	TOpenMultilineComment  = 206
+	TCloseMultilineComment = 207
 
 	//	 Operator tokens
 
-	TGreaterThanOperator    = 301 // ">"
-	TLessThanOperator       = 302 // "<"
-	TGreaterEqualOperator   = 303 // ">="
-	TLessEqualOperator      = 304 // "<="
-	TEqualOperator          = 305 // "=="
-	TNotEqualOperator       = 306 // "!="
-	TAdditionOperator       = 307 // "+"
-	TSubtractionOperator    = 308 // "-"
-	TMultiplicationOperator = 309 // "*"
-	TDivisionOperator       = 310 // "/"
-	TModuleOperator         = 311 // "%"
-	TExponentiationOperator = 312 // "**"
-	TAndOperator            = 313 // "&&"
-	TOrOperator             = 314 // "||"
-	TNotOperator            = 315 // "!"
+	TGreaterThanOperator    = 301
+	TLessThanOperator       = 302
+	TGreaterEqualOperator   = 303
+	TLessEqualOperator      = 304
+	TEqualOperator          = 305
+	TNotEqualOperator       = 306
+	TAdditionOperator       = 307
+	TSubtractionOperator    = 308
+	TMultiplicationOperator = 309
+	TDivisionOperator       = 310
+	TModuleOperator         = 311
+	TExponentiationOperator = 312
+	TAndOperator            = 313
+	TOrOperator             = 314
+	TNotOperator            = 315
+	TDeclarationOperator    = 316
+	TAttributioOperator     = 317
 
 	//	 Type tokens
 
@@ -67,6 +69,62 @@ const (
 	TInputEnd = 501
 	TLexError = 502
 	TNilValue = 503
+)
+
+// Constants for token symbols
+const (
+	//	 Construction tokens
+
+	Construct      = "Construct"
+	DefineFunction = "Architect"
+	Return         = "Integrate"
+	Comma          = ","
+	Colom          = ":"
+
+	//	 Conditional and repetition tokens
+
+	If    = "if"
+	Else  = "else"
+	Elif  = "elif"
+	For   = "for"
+	Break = "detach"
+
+	//	 Structure tokens
+
+	OpenParentheses       = "("
+	CloseParentheses      = ")"
+	OpenBraces            = "{"
+	CloseBraces           = "}"
+	SingleLineComment     = "//"
+	OpenMultilineComment  = "/*"
+	CloseMultilineComment = "*/"
+
+	//	 Operators
+
+	GreaterThan            = ">"
+	LessThanOperator       = "<"
+	GreaterEqualOperator   = ">="
+	LessEqualOperator      = "<="
+	EqualOperator          = "=="
+	NotEqualOperator       = "!="
+	AdditionOperator       = "+"
+	SubtractionOperator    = "-"
+	MultiplicationOperator = "*"
+	DivisionOperator       = "/"
+	ModuleOperator         = "%"
+	ExponentiationOperator = "**"
+	AndOperator            = "&&"
+	OrOperator             = "||"
+	NotOperator            = "!"
+	DeclarationOperator    = ":="
+	AttributioOperator     = "="
+
+	//	 Type tokens
+
+	Integer = "Gear"
+	FLoat   = "Tensor"
+	Nil     = "Nil"
+	Id      = "Id"
 )
 
 // lexical struct to hold lexical analyzer state
