@@ -3,7 +3,8 @@
         Integrate n1
 
         {
-            n1 += n1
+            count = count + 1
+            n1 = n1 + n1
         } for count < n2
 
         count: Gear = 0
