@@ -10,19 +10,20 @@
             }
         } else {
             Send("varBoolean2 == Active\n")
+            // Lets read from the standard input into a new var
+            varString2: Omnidrone = ""
+            Receive(varString2)
+            // Then print the value read
+            Send(varString2)
         } elif varBoolean2 {
             Send("varBoolean1 == Inactive\n")
         } if !varBoolean1
 
         /*
-        Variables declaration use the following structure:
-
-
-        Variable declaration should be accepted by the following regular expression:
-        (((A-Z)|(a-z))+(_|(A-Z)|(a-z)|(0-9))*)+(,( )*(((A-Z)|(a-z))+(_|(A-Z)|(a-z)|(0-9))*)+)*:( )*(Nil|Gear|Tensor|State|Monodrone|Omnidrone)( )*=<expression>
-
-        backup:
-        (((A-Z)*(a-z)*)+)(,((A-Z)+|(a-z)+)+)*:( )*(Nil|Gear|Tensor|State|Monodrone|Omnidrone)( )*=
+            This is a multiline comment...
+            This one as well
+            Another one
+            Multiple lines, one block
         */
 
         varString1: Omnidrone := "Hello, World!"
