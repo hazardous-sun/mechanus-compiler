@@ -13,40 +13,47 @@ import (
 const (
 	//	 Construction tokens
 
-	TConstruct = 1 // "CONSTRUCT"
-	TComma     = 2 // ","
-	TFunction  = 3 // "ARCHITECT"
-	TReturn    = 4 // "INTEGRATE"
+	TConstruct      = 1 // "Construct"
+	TDefineFunction = 2 // "Architect"
+	TReturn         = 3 // "Integrate"
+	TComma          = 4 // ","
+	TColom          = 5 // ":"
 
 	//	 Conditional and repetition tokens
 
-	TIf     = 100 // "IF"
-	TElse   = 101 // "ELSE"
-	TElseIf = 102 // "ELIF"
-	TFor    = 103 // "FOR"
-	TBreak  = 104 // "DETACH"
+	TIf    = 101 // "if"
+	TElse  = 102 // "else"
+	TElif  = 103 // "elif"
+	TFor   = 104 // "for"
+	TBreak = 105 // "detach"
 
 	//	 Structure tokens
 
-	TOpenParentheses  = 200 // "("
-	TCloseParentheses = 201 // ")"
-	TOpenBraces       = 202 // "{"
-	TCloseBraces      = 203 // "}"
+	TOpenParentheses       = 201 // "("
+	TCloseParentheses      = 202 // ")"
+	TOpenBraces            = 203 // "{"
+	TCloseBraces           = 204 // "}"
+	TSingleLineComment     = 205 // "//"
+	TOpenMultilineComment  = 206 // "/*"
+	TCloseMultilineComment = 207 // "*/"
 
 	//	 Operator tokens
 
 	TGreaterThanOperator    = 301 // ">"
 	TLessThanOperator       = 302 // "<"
-	TGreaterEqualOperator   = 303 // "
-	TLessEqualOperator      = 304 // <=
-	TEqualOperator          = 305 // ==
-	TNotEqualOperator       = 306 // !=
-	TAdditionOperator       = 307 // +
-	TSubtractionOperator    = 308 // -
-	TMultiplicationOperator = 309 // *
-	TDivisionOperator       = 310 // /
-	TModuleOperator         = 311 // %
-	TExponentiationOperator = 312 // **
+	TGreaterEqualOperator   = 303 // ">="
+	TLessEqualOperator      = 304 // "<="
+	TEqualOperator          = 305 // "=="
+	TNotEqualOperator       = 306 // "!="
+	TAdditionOperator       = 307 // "+"
+	TSubtractionOperator    = 308 // "-"
+	TMultiplicationOperator = 309 // "*"
+	TDivisionOperator       = 310 // "/"
+	TModuleOperator         = 311 // "%"
+	TExponentiationOperator = 312 // "**"
+	TAndOperator            = 313 // "&&"
+	TOrOperator             = 314 // "||"
+	TNotOperator            = 315 // "!"
 
 	//	 Type tokens
 
@@ -57,9 +64,9 @@ const (
 
 	//	 Control tokens
 
-	TInputEnd = 900
-	TLexError = 901
-	TNilValue = 999
+	TInputEnd = 501
+	TLexError = 502
+	TNilValue = 503
 )
 
 // lexical struct to hold lexical analyzer state
@@ -179,7 +186,7 @@ func (lex *lexical) alphabeticalCharacter(sbLexeme strings.Builder) {
 	case "ELSE":
 		lex.token = TElse
 	case "ELSE_IF":
-		lex.token = TElseIf
+		lex.token = TElif
 	case "FOR":
 		lex.token = TFor
 	case "BREAK":
@@ -250,7 +257,7 @@ func (lex *lexical) displayToken() {
 		tokenLexeme = "T_IF"
 	case TElse:
 		tokenLexeme = "T_ELSE"
-	case TElseIf:
+	case TElif:
 		tokenLexeme = "T_ELSE_IF"
 	case TFor:
 		tokenLexeme = "T_FOR"
