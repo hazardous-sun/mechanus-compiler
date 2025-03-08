@@ -1,13 +1,25 @@
 {
     {
+        Integrate n1
+
+        {
+            n1 += n1
+        } for count < n2
+
+        count: Gear = 0
+    } Gear (n1, n2: Gear)manualMultiplication Architect
+
+    {
         Integrate 0
+
+        result: Gear := manualMultiplication(varInteger1, varInteger2)
 
         {
             count := 0
             Send(varString1 + "\n")
-            for count <= 100 {
+            {
                 Send("All hail Mechanus!\n")
-            }
+            } for count <= 100
         } else {
             Send("varBoolean2 == Active\n")
             // Lets read from the standard input into a new var
