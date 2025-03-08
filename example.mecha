@@ -18,6 +18,11 @@
             count := 0
             Send(varString1 + "\n")
             {
+                {
+                    Send("what?")
+                    detach
+                } if 20 < 30
+                }}
                 Send("All hail Mechanus!\n")
             } for count <= 100
         } else {
