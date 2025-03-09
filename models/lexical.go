@@ -17,6 +17,7 @@ const (
 	TIntegrate = 3
 	TComma     = 4
 	TColon     = 5
+	TString    = 6
 
 	//	 Conditional and repetition tokens
 
@@ -114,8 +115,9 @@ const (
 const (
 	// Construction tokens
 
-	Comma = ','
-	Colon = ':'
+	Comma  = ','
+	Colon  = ':'
+	String = '"'
 
 	//	 Structure tokens
 
@@ -165,6 +167,7 @@ const (
 	OutputIntegrate = "T_INTEGRATE"
 	OutputComma     = "T_COMMA"
 	OutputColon     = "T_COLON"
+	OutputString    = "T_STRING"
 
 	//   Conditional and repetition tokens
 
@@ -223,6 +226,11 @@ const (
 
 	OutputDeclarationOperator = "T_DECLARATION_OPERATOR"
 	OutputAttributionOperator = "T_ATTRIBUTION_OPERATOR"
+
+	// Built-in functions
+
+	OutputSend    = "T_SEND"
+	OutputReceive = "T_RECEIVE"
 )
 
 // Lexical struct to hold Lexical analyzer state
@@ -286,32 +294,46 @@ func (lex *Lexical) MovelookAhead() {
 }
 
 func (lex *Lexical) NextToken() {
-	var sbLexeme strings.Builder
-
 	for lex.LookAhead == ' ' || lex.LookAhead == '\t' || lex.LookAhead == '\n' || lex.LookAhead == '\r' {
 		lex.MovelookAhead()
 	}
 
-	if lex.LookAhead >= 'A' && lex.LookAhead <= 'Z' {
+	if lex.isAlphabeticalCharacter() {
 		lex.alphabeticalCharacter()
-	} else if lex.LookAhead >= '0' && lex.LookAhead <= '9' {
+	} else if lex.isNumericalCharacter() {
 		lex.numericalCharacter()
+	} else if lex.isString() {
+		lex.stringCharacters()
 	} else {
 		temp := lex.LookAhead
-		if (lex.Pointer+1) <= len(lex.InputLine) && (lex.InputLine[lex.Pointer+1] >= '&' && lex.InputLine[lex.Pointer+1] <= '/') {
+		if lex.isMultiCharacterSymbol() {
 			lex.MovelookAhead()
 			lex.multiSymbolCharacter(temp)
 		} else {
 			lex.uniqueSymbolCharacter(temp)
 		}
 	}
+}
 
-	lex.Lexeme = sbLexeme.String()
+func (lex *Lexical) isAlphabeticalCharacter() bool {
+	return (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= 'a' && lex.LookAhead <= 'z')
+}
+
+func (lex *Lexical) isNumericalCharacter() bool {
+	return lex.LookAhead >= '0' && lex.LookAhead <= '9'
+}
+
+func (lex *Lexical) isString() bool {
+	return lex.LookAhead == '"'
+}
+
+func (lex *Lexical) isMultiCharacterSymbol() bool {
+	return (lex.Pointer+1) <= len(lex.InputLine) && (lex.InputLine[lex.Pointer+1] >= '&' && lex.InputLine[lex.Pointer+1] <= '/')
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (lex *Lexical) alphabeticalCharacter() string {
+func (lex *Lexical) alphabeticalCharacter() {
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.LookAhead)
 	lex.MovelookAhead()
@@ -363,8 +385,6 @@ func (lex *Lexical) alphabeticalCharacter() string {
 	default:
 		lex.Token = TId
 	}
-
-	return sbLexeme.String()
 }
 
 func (lex *Lexical) numericalCharacter() {
@@ -375,10 +395,11 @@ func (lex *Lexical) numericalCharacter() {
 		sbLexeme.WriteRune(lex.LookAhead)
 		lex.MovelookAhead()
 	}
+	lex.Lexeme = sbLexeme.String()
 	lex.Token = TGear
 }
 
-func (lex *Lexical) uniqueSymbolCharacter(temp rune) string {
+func (lex *Lexical) uniqueSymbolCharacter(temp rune) {
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(temp)
 
@@ -420,12 +441,11 @@ func (lex *Lexical) uniqueSymbolCharacter(temp rune) string {
 		lex.Token = TLexError
 		lex.ErrorMessage = fmt.Sprintf("Lexical error on line: %d\nRecognized upon reaching column: %d\nError line: <%s>\nUnknown token: %c", lex.CurrentLine, lex.CurrentColumn, lex.InputLine, lex.LookAhead)
 	}
-	sbLexeme.WriteRune(lex.LookAhead)
 	lex.MovelookAhead()
-	return sbLexeme.String()
+	lex.Lexeme = sbLexeme.String()
 }
 
-func (lex *Lexical) multiSymbolCharacter(temp rune) string {
+func (lex *Lexical) multiSymbolCharacter(temp rune) {
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(temp)
 	lex.MovelookAhead()
@@ -471,7 +491,24 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) string {
 		lex.ErrorMessage = fmt.Sprintf("Lexical error on line: %d\nRecognized upon reaching column: %d\nError line: <%s>\nUnknown token: %s", lex.CurrentLine, lex.CurrentColumn, lex.InputLine, lex.Lexeme)
 	}
 
-	return sbLexeme.String()
+	lex.Lexeme = sbLexeme.String()
+}
+
+func (lex *Lexical) stringCharacters() {
+	sbLexeme := strings.Builder{}
+	sbLexeme.WriteRune(lex.LookAhead)
+	lex.MovelookAhead()
+
+	for lex.LookAhead != '"' {
+		sbLexeme.WriteRune(lex.LookAhead)
+		lex.MovelookAhead()
+	}
+
+	sbLexeme.WriteRune(lex.LookAhead)
+	lex.MovelookAhead()
+
+	lex.Lexeme = sbLexeme.String()
+	lex.Token = TString
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -490,6 +527,8 @@ func (lex *Lexical) DisplayToken() {
 		tokenLexeme = OutputComma
 	case TColon:
 		tokenLexeme = OutputColon
+	case TString:
+		tokenLexeme = OutputString
 	// Conditional and repetition
 	case TIf:
 		tokenLexeme = OutputIf
@@ -562,6 +601,13 @@ func (lex *Lexical) DisplayToken() {
 		tokenLexeme = OutputDeclarationOperator
 	case TAttributionOperator:
 		tokenLexeme = OutputAttributionOperator
+	case TNotOperator:
+		tokenLexeme = OutputNotOperator
+	// Built-in functions
+	case TSend:
+		tokenLexeme = OutputSend
+	case TReceive:
+		tokenLexeme = OutputReceive
 	default:
 		tokenLexeme = "N/A"
 	}
@@ -587,7 +633,7 @@ func (lex *Lexical) Close(file string) {
 		}
 	}
 
-	custom_errors.Log(custom_errors.FileCloseSuccess, nil, custom_errors.InfoLevel)
+	custom_errors.Log(custom_errors.FileCloseSuccess, nil, custom_errors.SuccessLevel)
 }
 
 func (lex *Lexical) WriteOutput() error {
