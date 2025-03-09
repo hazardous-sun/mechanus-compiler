@@ -316,7 +316,7 @@ func (lex *Lexical) NextToken() error {
 	if lex.CommentBlock {
 		err = lex.skipComment()
 	} else {
-		for lex.separatorCharacter() {
+		for lex.isSeparatorCharacter() {
 			err = lex.MovelookAhead()
 			if err != nil {
 				return err
@@ -338,10 +338,6 @@ func (lex *Lexical) NextToken() error {
 		err = lex.symbolCharacter()
 	}
 	return err
-}
-
-func (lex *Lexical) separatorCharacter() bool {
-	return lex.LookAhead == ' ' || lex.LookAhead == '\t' || lex.LookAhead == '\n' || lex.LookAhead == '\r'
 }
 
 func (lex *Lexical) symbolCharacter() error {
@@ -380,6 +376,12 @@ func (lex *Lexical) multilineCommentEnd() bool {
 	return false
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
+func (lex *Lexical) isSeparatorCharacter() bool {
+	return lex.LookAhead == ' ' || lex.LookAhead == '\t' || lex.LookAhead == '\n' || lex.LookAhead == '\r'
+}
+
 func (lex *Lexical) isAlphabeticalCharacter() bool {
 	return (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= 'a' && lex.LookAhead <= 'z')
 }
@@ -398,6 +400,8 @@ func (lex *Lexical) isMultiCharacterSymbol() bool {
 	}
 	return (lex.Pointer+1) < len(lex.InputLine) && (lex.InputLine[lex.Pointer+1] >= '&' && lex.InputLine[lex.Pointer+1] <= '/')
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func matchesSingleCharSymbols(lookAhead rune) bool {
 	switch lookAhead {
@@ -421,8 +425,6 @@ func matchesSingleCharSymbols(lookAhead rune) bool {
 		return false
 	}
 }
-
-// ---------------------------------------------------------------------------------------------------------------------
 
 func (lex *Lexical) alphabeticalCharacter() error {
 	sbLexeme := strings.Builder{}
@@ -798,6 +800,8 @@ func (lex *Lexical) displayFunctions() string {
 	}
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (lex *Lexical) Close(file string) {
 	custom_errors.Log(fmt.Sprintf("closing %s file", file), nil, custom_errors.InfoLevel)
 
@@ -840,11 +844,11 @@ func (lex *Lexical) WriteOutput() error {
 }
 
 func (lex *Lexical) ShowTokens() {
-	fmt.Println("Identified Tokens (Token/Lexeme):")
+	custom_errors.Log(custom_errors.IdentifiedTokens, nil, custom_errors.SuccessLevel)
 	fmt.Println(lex.IdentifiedTokens.String())
 }
 
-func (lex *Lexical) storeTokens(tokenIdentificado string) {
-	lex.IdentifiedTokens.WriteString(tokenIdentificado)
+func (lex *Lexical) storeTokens(identifiedToken string) {
+	lex.IdentifiedTokens.WriteString(identifiedToken)
 	lex.IdentifiedTokens.WriteString("\n")
 }
