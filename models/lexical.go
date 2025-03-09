@@ -50,12 +50,11 @@ const (
 	TMultiplicationOperator = 309
 	TDivisionOperator       = 310
 	TModuleOperator         = 311
-	TExponentiationOperator = 312
-	TAndOperator            = 313
-	TOrOperator             = 314
-	TNotOperator            = 315
-	TDeclarationOperator    = 316
-	TAttributionOperator    = 317
+	TAndOperator            = 312
+	TOrOperator             = 313
+	TNotOperator            = 314
+	TDeclarationOperator    = 315
+	TAttributionOperator    = 316
 
 	//	 Type tokens
 
@@ -103,7 +102,6 @@ const (
 	State     = "STATE"
 	Monodrone = "MONODRONE"
 	Omnidrone = "OMNIDRONE"
-	Id        = "ID"
 
 	// Built-in functions
 
@@ -167,7 +165,6 @@ const (
 	OutputIntegrate = "T_INTEGRATE"
 	OutputComma     = "T_COMMA"
 	OutputColon     = "T_COLON"
-	OutputString    = "T_STRING"
 
 	//   Conditional and repetition tokens
 
@@ -236,7 +233,7 @@ const (
 // Lexical struct to hold Lexical analyzer state
 type Lexical struct {
 	InputFile        *os.File
-	lines            []string
+	Lines            []string
 	OutputFile       *os.File
 	LookAhead        rune
 	Token            int
@@ -254,7 +251,7 @@ func NewLexical(inputFile, outputFile *os.File) Lexical {
 	lex := Lexical{
 		InputFile:     inputFile,
 		OutputFile:    outputFile,
-		lines:         make([]string, 0),
+		Lines:         make([]string, 0),
 		CurrentLine:   0,
 		CurrentColumn: 0,
 		Pointer:       0,
@@ -268,19 +265,27 @@ func NewLexical(inputFile, outputFile *os.File) Lexical {
 func (lex *Lexical) ReadLines() error {
 	scanner := bufio.NewScanner(lex.InputFile)
 	for scanner.Scan() {
-		lex.lines = append(lex.lines, scanner.Text())
+		lex.Lines = append(lex.Lines, scanner.Text())
 	}
 	return scanner.Err()
 }
 
-func (lex *Lexical) MovelookAhead() {
+func (lex *Lexical) MovelookAhead() error {
 	// end of line reached
 	if lex.Pointer+1 > len(lex.InputLine) {
-		lex.nextLine()
+		err := lex.nextLine()
+
+		if err != nil {
+			return err
+		}
+
 		if len(lex.InputLine) > 1 {
 			lex.LookAhead = rune(lex.InputLine[lex.Pointer])
 		} else {
-			lex.MovelookAhead()
+			err := lex.MovelookAhead()
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		lex.LookAhead = rune(lex.InputLine[lex.Pointer])
@@ -290,44 +295,89 @@ func (lex *Lexical) MovelookAhead() {
 	}
 	lex.Pointer++
 	lex.CurrentColumn = lex.Pointer + 1
+	return nil
 }
 
-func (lex *Lexical) nextLine() {
+func (lex *Lexical) nextLine() error {
 	lex.CurrentLine++
 	lex.Pointer = 0
-	lex.InputLine = lex.lines[lex.CurrentLine]
+	if lex.CurrentLine < len(lex.Lines) {
+		lex.InputLine = lex.Lines[lex.CurrentLine]
+		return nil
+	} else {
+		custom_errors.Log(custom_errors.EndOfFileReached, nil, custom_errors.InfoLevel)
+		return fmt.Errorf(custom_errors.EndOfFileReached)
+	}
 }
 
-func (lex *Lexical) NextToken() {
+func (lex *Lexical) NextToken() error {
+	var err error
 	// Check if lex.LookAhead is inside a comment block
 	if lex.CommentBlock {
-		for !lex.multilineCommentEnd() {
-			lex.MovelookAhead()
-		}
+		err = lex.skipComment()
 	} else {
-		for lex.LookAhead == ' ' || lex.LookAhead == '\t' || lex.LookAhead == '\n' || lex.LookAhead == '\r' {
-			lex.MovelookAhead()
+		for lex.separatorCharacter() {
+			err = lex.MovelookAhead()
+			if err != nil {
+				return err
+			}
 		}
+	}
+
+	if err != nil {
+		return err
 	}
 
 	if lex.isAlphabeticalCharacter() {
-		lex.alphabeticalCharacter()
+		err = lex.alphabeticalCharacter()
 	} else if lex.isNumericalCharacter() {
-		lex.numericalCharacter()
+		err = lex.numericalCharacter()
 	} else if lex.isString() {
-		lex.stringCharacters()
+		err = lex.stringCharacters()
 	} else {
-		temp := lex.LookAhead
-		lex.MovelookAhead()
-		lex.multiSymbolCharacter(temp)
+		err = lex.symbolCharacter()
 	}
+	return err
+}
+
+func (lex *Lexical) separatorCharacter() bool {
+	return lex.LookAhead == ' ' || lex.LookAhead == '\t' || lex.LookAhead == '\n' || lex.LookAhead == '\r'
+}
+
+func (lex *Lexical) symbolCharacter() error {
+	temp := lex.LookAhead
+	err := lex.MovelookAhead()
+	if err != nil {
+		return err
+	}
+	err = lex.multiSymbolCharacter(temp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (lex *Lexical) skipComment() error {
+	for !lex.multilineCommentEnd() {
+		err := lex.MovelookAhead()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (lex *Lexical) multilineCommentEnd() bool {
 	// Checks that pointing to lex.Pointer+1 won't raise an index out of bound exception
 	// AND
 	// Checks if the current char + the next char == CloseMultilineComment
-	return (lex.Pointer+1 < len(lex.InputLine)) && (fmt.Sprintf("%c%c", lex.LookAhead, lex.InputLine[lex.Pointer+1]) != CloseMultilineComment)
+	if lex.Pointer+1 < len(lex.InputLine) {
+		temp := fmt.Sprintf("%c%c", lex.LookAhead, lex.InputLine[lex.Pointer+1])
+		if temp == CloseMultilineComment {
+			return true
+		}
+	}
+	return false
 }
 
 func (lex *Lexical) isAlphabeticalCharacter() bool {
@@ -374,14 +424,21 @@ func matchesSingleCharSymbols(lookAhead rune) bool {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (lex *Lexical) alphabeticalCharacter() {
+func (lex *Lexical) alphabeticalCharacter() error {
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.LookAhead)
-	lex.MovelookAhead()
+	err := lex.MovelookAhead()
+
+	if err != nil {
+		return err
+	}
 
 	for (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= '0' && lex.LookAhead <= '9') || lex.LookAhead == '_' {
 		sbLexeme.WriteRune(lex.LookAhead)
-		lex.MovelookAhead()
+		err = lex.MovelookAhead()
+		if err != nil {
+			return err
+		}
 	}
 
 	lex.Lexeme = sbLexeme.String()
@@ -426,18 +483,27 @@ func (lex *Lexical) alphabeticalCharacter() {
 	default:
 		lex.Token = TId
 	}
+
+	return nil
 }
 
-func (lex *Lexical) numericalCharacter() {
+func (lex *Lexical) numericalCharacter() error {
+	var err error
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.LookAhead)
-	lex.MovelookAhead()
+	err = lex.MovelookAhead()
+
+	if err != nil {
+		return err
+	}
+
 	for lex.LookAhead >= '0' && lex.LookAhead <= '9' {
 		sbLexeme.WriteRune(lex.LookAhead)
-		lex.MovelookAhead()
+		err = lex.MovelookAhead()
 	}
 	lex.Lexeme = sbLexeme.String()
 	lex.Token = TGear
+	return err
 }
 
 func (lex *Lexical) uniqueSymbolCharacter(temp rune) {
@@ -482,23 +548,26 @@ func (lex *Lexical) uniqueSymbolCharacter(temp rune) {
 		lex.Token = TLexError
 		lex.ErrorMessage = fmt.Sprintf("Lexical error on line: %d\nRecognized upon reaching column: %d\nError line: <%s>\nUnknown token: %c", lex.CurrentLine, lex.CurrentColumn, lex.InputLine, lex.LookAhead)
 	}
-	lex.MovelookAhead()
 	lex.Lexeme = sbLexeme.String()
 }
 
-func (lex *Lexical) multiSymbolCharacter(temp rune) {
+func (lex *Lexical) multiSymbolCharacter(temp rune) error {
+	var err error
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(temp)
-	lex.MovelookAhead()
 
 	for lex.LookAhead >= '&' && lex.LookAhead <= '/' {
 		if lex.LookAhead == temp {
 			sbLexeme.WriteRune(lex.LookAhead)
-			lex.MovelookAhead()
+			err = lex.MovelookAhead()
 		} else {
 			sbLexeme.WriteRune(lex.LookAhead)
-			lex.MovelookAhead()
+			err = lex.MovelookAhead()
 			break
+		}
+
+		if err != nil {
+			return err
 		}
 	}
 
@@ -510,7 +579,7 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) {
 		lex.Token = TSingleLineComment
 		// The lexical analyzer can jump to the next line because anything to the right of the single line comment
 		// symbol, "//", should be ignored
-		lex.nextLine()
+		err = lex.nextLine()
 	case OpenMultilineComment:
 		lex.Token = TOpenMultilineComment
 		lex.CommentBlock = true
@@ -536,128 +605,197 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) {
 		lex.uniqueSymbolCharacter(temp)
 	}
 
+	if err != nil {
+		return err
+	}
+
 	lex.Lexeme = sbLexeme.String()
+	return err
 }
 
-func (lex *Lexical) stringCharacters() {
+func (lex *Lexical) stringCharacters() error {
+	var err error
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.LookAhead)
-	lex.MovelookAhead()
+	err = lex.MovelookAhead()
+
+	if err != nil {
+		return err
+	}
 
 	for lex.LookAhead != '"' {
 		sbLexeme.WriteRune(lex.LookAhead)
-		lex.MovelookAhead()
+		err = lex.MovelookAhead()
+
+		if err != nil {
+			return err
+		}
 	}
 
 	sbLexeme.WriteRune(lex.LookAhead)
-	lex.MovelookAhead()
-
+	err = lex.MovelookAhead()
 	lex.Lexeme = sbLexeme.String()
 	lex.Token = TString
+	return err
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (lex *Lexical) DisplayToken() {
 	var tokenLexeme string
+
+	if lex.Token >= TConstruct && lex.Token <= TString {
+		tokenLexeme = lex.displayConstructionToken()
+	} else if lex.Token >= TIf && lex.Token <= TDetach {
+		tokenLexeme = lex.displayConditionalRepetitionToken()
+	} else if lex.Token >= TNil && lex.Token <= TId {
+		tokenLexeme = lex.displayTypeToken()
+	} else if lex.Token >= TOpenParentheses && lex.Token <= TCloseMultilineComment {
+		tokenLexeme = lex.displayStructureToken()
+	} else if lex.Token >= TGreaterThanOperator && lex.Token <= TNotOperator {
+		tokenLexeme = lex.displayOperatorToken()
+	} else {
+		tokenLexeme = lex.displayFunctions()
+	}
+
+	fmt.Println(tokenLexeme + " ( " + lex.Lexeme + " )")
+	lex.storeTokens(tokenLexeme + " ( " + lex.Lexeme + " )")
+}
+
+func (lex *Lexical) displayConstructionToken() string {
 	switch lex.Token {
 	// Construction tokens
 	case TConstruct:
-		tokenLexeme = OutputConstruct
+		return OutputConstruct
 	case TArchitect:
-		tokenLexeme = OutputArchitect
+		return OutputArchitect
 	case TIntegrate:
-		tokenLexeme = OutputIntegrate
+		return OutputIntegrate
 	case TComma:
-		tokenLexeme = OutputComma
+		return OutputComma
 	case TColon:
-		tokenLexeme = OutputColon
+		return OutputColon
 	case TString:
-		tokenLexeme = OutputString
+		return OutputOmnidrone
+	default:
+		return "N/A"
+	}
+}
+
+func (lex *Lexical) displayConditionalRepetitionToken() string {
 	// Conditional and repetition
+	switch lex.Token {
 	case TIf:
-		tokenLexeme = OutputIf
+		return OutputIf
 	case TElse:
-		tokenLexeme = OutputElse
+		return OutputElse
 	case TElif:
-		tokenLexeme = OutputElif
+		return OutputElif
 	case TFor:
-		tokenLexeme = OutputFor
+		return OutputFor
 	case TDetach:
-		tokenLexeme = OutputDetach
+		return OutputDetach
+	default:
+		return "N/A"
+	}
+}
+
+func (lex *Lexical) displayTypeToken() string {
+	switch lex.Token {
 	// Type
 	case TNil:
-		tokenLexeme = OutputNil
+		return OutputNil
 	case TGear:
-		tokenLexeme = OutputGear
+		return OutputGear
 	case TTensor:
-		tokenLexeme = OutputTensor
+		return OutputTensor
 	case TState:
-		tokenLexeme = OutputState
+		return OutputState
 	case TMonodrone:
-		tokenLexeme = OutputMonodrone
+		return OutputMonodrone
 	case TOmnidrone:
-		tokenLexeme = OutputTensor
+		return OutputTensor
 	case TId:
-		tokenLexeme = OutputId
+		return OutputId
+	default:
+		return "N/A"
+	}
+}
+
+func (lex *Lexical) displayStructureToken() string {
+	switch lex.Token {
 	// Structure
 	case TOpenParentheses:
-		tokenLexeme = OutputOpenParentheses
+		return OutputOpenParentheses
 	case TCloseParentheses:
-		tokenLexeme = OutputCloseParentheses
+		return OutputCloseParentheses
 	case TOpenBraces:
-		tokenLexeme = OutputOpenBraces
+		return OutputOpenBraces
 	case TCloseBraces:
-		tokenLexeme = OutputCloseBraces
+		return OutputCloseBraces
 	case TSingleLineComment:
-		tokenLexeme = OutputSingleLineComment
+		return OutputSingleLineComment
 	case TOpenMultilineComment:
-		tokenLexeme = OutputOpenMultilineComment
+		return OutputOpenMultilineComment
 	case TCloseMultilineComment:
-		tokenLexeme = OutputCloseMultilineComment
+		return OutputCloseMultilineComment
+	default:
+		return "N/A"
+	}
+}
+
+func (lex *Lexical) displayOperatorToken() string {
+	switch lex.Token {
 	// Operators
 	case TGreaterThanOperator:
-		tokenLexeme = OutputGreaterThanOperator
+		return OutputGreaterThanOperator
 	case TGreaterEqualOperator:
-		tokenLexeme = OutputGreaterEqualOperator
+		return OutputGreaterEqualOperator
 	case TLessThanOperator:
-		tokenLexeme = OutputLessThanOperator
+		return OutputLessThanOperator
 	case TLessEqualOperator:
-		tokenLexeme = OutputLessEqualOperator
+		return OutputLessEqualOperator
+	case TEqualOperator:
+		return OutputEqualOperator
 	case TNotEqualOperator:
-		tokenLexeme = OutputNotEqualOperator
+		return OutputNotEqualOperator
 	case TAdditionOperator:
-		tokenLexeme = OutputAdditionOperator
+		return OutputAdditionOperator
 	case TSubtractionOperator:
-		tokenLexeme = OutputSubtractionOperator
+		return OutputSubtractionOperator
 	case TMultiplicationOperator:
-		tokenLexeme = OutputMultiplicationOperator
+		return OutputMultiplicationOperator
 	case TDivisionOperator:
-		tokenLexeme = OutputDivisionOperator
+		return OutputDivisionOperator
 	case TModuleOperator:
-		tokenLexeme = OutputModuleOperator
+		return OutputModuleOperator
 	case NotOperator:
-		tokenLexeme = OutputNotOperator
+		return OutputNotOperator
 	case TAndOperator:
-		tokenLexeme = OutputAndOperator
+		return OutputAndOperator
 	case TOrOperator:
-		tokenLexeme = OutputOrOperator
+		return OutputOrOperator
 	case TDeclarationOperator:
-		tokenLexeme = OutputDeclarationOperator
+		return OutputDeclarationOperator
 	case TAttributionOperator:
-		tokenLexeme = OutputAttributionOperator
+		return OutputAttributionOperator
 	case TNotOperator:
-		tokenLexeme = OutputNotOperator
+		return OutputNotOperator
+	default:
+		return "N/A"
+	}
+}
+
+func (lex *Lexical) displayFunctions() string {
+	switch lex.Token {
 	// Built-in functions
 	case TSend:
-		tokenLexeme = OutputSend
+		return OutputSend
 	case TReceive:
-		tokenLexeme = OutputReceive
+		return OutputReceive
 	default:
-		tokenLexeme = "N/A"
+		return "N/A"
 	}
-	fmt.Println(tokenLexeme + " ( " + lex.Lexeme + " )")
-	lex.storeTokens(tokenLexeme + " ( " + lex.Lexeme + " )")
 }
 
 func (lex *Lexical) Close(file string) {
