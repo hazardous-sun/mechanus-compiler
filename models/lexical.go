@@ -399,7 +399,7 @@ func (lex *Lexical) isNumericalCharacter() bool {
 }
 
 func (lex *Lexical) isString() bool {
-	return lex.LookAhead == '"'
+	return lex.LookAhead == SingleQuote || lex.LookAhead == DoubleQuote
 }
 
 func (lex *Lexical) isMultiCharacterSymbol() bool {
