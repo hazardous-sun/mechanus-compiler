@@ -270,10 +270,19 @@ func NewLexical(inputFile, outputFile *os.File) Lexical {
 
 func (lex *Lexical) ReadLines() error {
 	scanner := bufio.NewScanner(lex.InputFile)
+
 	for scanner.Scan() {
 		lex.Lines = append(lex.Lines, scanner.Text())
 	}
-	return scanner.Err()
+
+	err := scanner.Err()
+
+	if err == nil {
+		lex.InputLine = lex.Lines[0]
+		lex.LookAhead = rune(lex.InputLine[lex.Pointer])
+	}
+
+	return err
 }
 
 func (lex *Lexical) MovelookAhead() error {
@@ -416,8 +425,6 @@ func matchesSingleCharSymbols(lookAhead rune) bool {
 	// Construction
 	case Comma:
 		return true
-	case Colon:
-		return true
 	case DoubleQuote:
 		return true
 	case SingleQuote:
@@ -533,6 +540,98 @@ func (lex *Lexical) numericalCharacter() error {
 	return err
 }
 
+func (lex *Lexical) multiSymbolCharacter(temp rune) error {
+	var err error
+	sbLexeme := strings.Builder{}
+	sbLexeme.WriteRune(temp)
+
+	uniqueSymbol := false
+
+	if checkMultiSymbolMatch(temp, lex.LookAhead) {
+		sbLexeme.WriteRune(lex.LookAhead)
+		err = lex.MovelookAhead()
+
+		if err != nil {
+			return err
+		}
+	}
+
+	lex.Lexeme = sbLexeme.String()
+
+	switch lex.Lexeme {
+	// Construction tokens
+	case SingleLineComment:
+		lex.Token = TSingleLineComment
+		// The lexical analyzer can jump to the next line because anything to the right of the single line comment
+		// symbol, "//", should be ignored
+		err = lex.nextLine()
+	case OpenMultilineComment:
+		lex.Token = TOpenMultilineComment
+		lex.CommentBlock = true
+	case CloseMultilineComment:
+		lex.Token = TCloseMultilineComment
+		lex.CommentBlock = false
+	// Conditional and repetition tokens
+	case GreaterEqualOperator:
+		lex.Token = TGreaterEqualOperator
+	case LessEqualOperator:
+		lex.Token = TLessEqualOperator
+	case EqualOperator:
+		lex.Token = TEqualOperator
+	case NotEqualOperator:
+		lex.Token = TNotEqualOperator
+	case AndOperator:
+		lex.Token = TAndOperator
+	case OrOperator:
+		lex.Token = TOrOperator
+	case DeclarationOperator:
+		lex.Token = TDeclarationOperator
+	default:
+		lex.uniqueSymbolCharacter(temp)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if !uniqueSymbol {
+		lex.Lexeme = sbLexeme.String()
+	}
+
+	return err
+}
+
+func checkMultiSymbolMatch(char1, char2 rune) bool {
+	sbLexeme := strings.Builder{}
+	sbLexeme.WriteRune(char1)
+	sbLexeme.WriteRune(char2)
+	symbol := sbLexeme.String()
+	switch symbol {
+	case SingleLineComment:
+		return true
+	case OpenMultilineComment:
+		return true
+	case CloseMultilineComment:
+		return true
+	case GreaterEqualOperator:
+		return true
+	case LessEqualOperator:
+		return true
+	case EqualOperator:
+		return true
+	case NotEqualOperator:
+		return true
+	case AndOperator:
+		return true
+	case OrOperator:
+		return true
+	case DeclarationOperator:
+		return true
+	default:
+		return false
+	}
+}
+
 func (lex *Lexical) uniqueSymbolCharacter(temp rune) {
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(temp)
@@ -576,73 +675,6 @@ func (lex *Lexical) uniqueSymbolCharacter(temp rune) {
 		lex.ErrorMessage = fmt.Sprintf("Lexical error on line: %d\nRecognized upon reaching column: %d\nError line: <%s>\nUnknown token: %c", lex.CurrentLine, lex.CurrentColumn, lex.InputLine, lex.LookAhead)
 	}
 	lex.Lexeme = sbLexeme.String()
-}
-
-func (lex *Lexical) multiSymbolCharacter(temp rune) error {
-	var err error
-	sbLexeme := strings.Builder{}
-	sbLexeme.WriteRune(temp)
-
-	for lex.LookAhead >= '&' && lex.LookAhead <= '/' {
-		if lex.LookAhead == temp {
-			sbLexeme.WriteRune(lex.LookAhead)
-			err = lex.MovelookAhead()
-		} else {
-			sbLexeme.WriteRune(lex.LookAhead)
-			err = lex.MovelookAhead()
-			break
-		}
-
-		if err != nil {
-			return err
-		}
-	}
-
-	lex.Lexeme = sbLexeme.String()
-	uniqueSymbol := false
-
-	switch lex.Lexeme {
-	// Construction tokens
-	case SingleLineComment:
-		lex.Token = TSingleLineComment
-		// The lexical analyzer can jump to the next line because anything to the right of the single line comment
-		// symbol, "//", should be ignored
-		err = lex.nextLine()
-	case OpenMultilineComment:
-		lex.Token = TOpenMultilineComment
-		lex.CommentBlock = true
-	case CloseMultilineComment:
-		lex.Token = TCloseMultilineComment
-		lex.CommentBlock = false
-	// Conditional and repetition tokens
-	case GreaterEqualOperator:
-		lex.Token = TGreaterEqualOperator
-	case LessEqualOperator:
-		lex.Token = TLessEqualOperator
-	case EqualOperator:
-		lex.Token = TEqualOperator
-	case NotEqualOperator:
-		lex.Token = TNotEqualOperator
-	case AndOperator:
-		lex.Token = TAndOperator
-	case OrOperator:
-		lex.Token = TOrOperator
-	case DeclarationOperator:
-		lex.Token = TDeclarationOperator
-	default:
-		uniqueSymbol = true
-		lex.uniqueSymbolCharacter(temp)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if !uniqueSymbol {
-		lex.Lexeme = sbLexeme.String()
-	}
-
-	return err
 }
 
 func (lex *Lexical) quoteCharacters() error {
