@@ -235,19 +235,19 @@ const (
 
 // Lexical struct to hold Lexical analyzer state
 type Lexical struct {
-	InputFile          *os.File
-	lines              []string
-	OutputFile         *os.File
-	LookAhead          rune
-	Token              int
-	Lexeme             string
-	Pointer            int
-	InputLine          string
-	CurrentLine        int
-	CurrentColumn      int
-	ErrorMessage       string
-	IdentifiedTokens   strings.Builder
-	insideCommentBlock bool
+	InputFile        *os.File
+	lines            []string
+	OutputFile       *os.File
+	LookAhead        rune
+	Token            int
+	Lexeme           string
+	Pointer          int
+	InputLine        string
+	CurrentLine      int
+	CurrentColumn    int
+	ErrorMessage     string
+	IdentifiedTokens strings.Builder
+	CommentBlock     bool
 }
 
 func NewLexical(inputFile, outputFile *os.File) Lexical {
@@ -299,8 +299,15 @@ func (lex *Lexical) nextLine() {
 }
 
 func (lex *Lexical) NextToken() {
-	for lex.LookAhead == ' ' || lex.LookAhead == '\t' || lex.LookAhead == '\n' || lex.LookAhead == '\r' {
-		lex.MovelookAhead()
+	// Check if lex.LookAhead is inside a comment block
+	if lex.CommentBlock {
+		for !lex.multilineCommentEnd() {
+			lex.MovelookAhead()
+		}
+	} else {
+		for lex.LookAhead == ' ' || lex.LookAhead == '\t' || lex.LookAhead == '\n' || lex.LookAhead == '\r' {
+			lex.MovelookAhead()
+		}
 	}
 
 	if lex.isAlphabeticalCharacter() {
@@ -311,13 +318,16 @@ func (lex *Lexical) NextToken() {
 		lex.stringCharacters()
 	} else {
 		temp := lex.LookAhead
-		if lex.isMultiCharacterSymbol() {
-			lex.MovelookAhead()
-			lex.multiSymbolCharacter(temp)
-		} else {
-			lex.uniqueSymbolCharacter(temp)
-		}
+		lex.MovelookAhead()
+		lex.multiSymbolCharacter(temp)
 	}
+}
+
+func (lex *Lexical) multilineCommentEnd() bool {
+	// Checks that pointing to lex.Pointer+1 won't raise an index out of bound exception
+	// AND
+	// Checks if the current char + the next char == CloseMultilineComment
+	return (lex.Pointer+1 < len(lex.InputLine)) && (fmt.Sprintf("%c%c", lex.LookAhead, lex.InputLine[lex.Pointer+1]) != CloseMultilineComment)
 }
 
 func (lex *Lexical) isAlphabeticalCharacter() bool {
@@ -498,11 +508,15 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) {
 	// Construction tokens
 	case SingleLineComment:
 		lex.Token = TSingleLineComment
+		// The lexical analyzer can jump to the next line because anything to the right of the single line comment
+		// symbol, "//", should be ignored
 		lex.nextLine()
 	case OpenMultilineComment:
 		lex.Token = TOpenMultilineComment
+		lex.CommentBlock = true
 	case CloseMultilineComment:
 		lex.Token = TCloseMultilineComment
+		lex.CommentBlock = false
 	// Conditional and repetition tokens
 	case GreaterEqualOperator:
 		lex.Token = TGreaterEqualOperator
@@ -519,8 +533,7 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) {
 	case DeclarationOperator:
 		lex.Token = TDeclarationOperator
 	default:
-		lex.Token = TLexError
-		lex.ErrorMessage = fmt.Sprintf("Lexical error on line: %d\nRecognized upon reaching column: %d\nError line: <%s>\nUnknown token: %s", lex.CurrentLine, lex.CurrentColumn, lex.InputLine, lex.Lexeme)
+		lex.uniqueSymbolCharacter(temp)
 	}
 
 	lex.Lexeme = sbLexeme.String()
