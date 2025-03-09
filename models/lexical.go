@@ -235,18 +235,19 @@ const (
 
 // Lexical struct to hold Lexical analyzer state
 type Lexical struct {
-	InputFile        *os.File
-	lines            []string
-	OutputFile       *os.File
-	LookAhead        rune
-	Token            int
-	Lexeme           string
-	Pointer          int
-	InputLine        string
-	CurrentLine      int
-	CurrentColumn    int
-	ErrorMessage     string
-	IdentifiedTokens strings.Builder
+	InputFile          *os.File
+	lines              []string
+	OutputFile         *os.File
+	LookAhead          rune
+	Token              int
+	Lexeme             string
+	Pointer            int
+	InputLine          string
+	CurrentLine        int
+	CurrentColumn      int
+	ErrorMessage       string
+	IdentifiedTokens   strings.Builder
+	insideCommentBlock bool
 }
 
 func NewLexical(inputFile, outputFile *os.File) Lexical {
@@ -275,9 +276,7 @@ func (lex *Lexical) ReadLines() error {
 func (lex *Lexical) MovelookAhead() {
 	// end of line reached
 	if lex.Pointer+1 > len(lex.InputLine) {
-		lex.CurrentLine++
-		lex.Pointer = 0
-		lex.InputLine = lex.lines[lex.CurrentLine]
+		lex.nextLine()
 		if len(lex.InputLine) > 1 {
 			lex.LookAhead = rune(lex.InputLine[lex.Pointer])
 		} else {
@@ -291,6 +290,12 @@ func (lex *Lexical) MovelookAhead() {
 	}
 	lex.Pointer++
 	lex.CurrentColumn = lex.Pointer + 1
+}
+
+func (lex *Lexical) nextLine() {
+	lex.CurrentLine++
+	lex.Pointer = 0
+	lex.InputLine = lex.lines[lex.CurrentLine]
 }
 
 func (lex *Lexical) NextToken() {
@@ -493,6 +498,7 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) {
 	// Construction tokens
 	case SingleLineComment:
 		lex.Token = TSingleLineComment
+		lex.nextLine()
 	case OpenMultilineComment:
 		lex.Token = TOpenMultilineComment
 	case CloseMultilineComment:
