@@ -40,7 +40,7 @@ func main() {
 		return
 	}
 
-	err = lex.MovelookAhead()
+	err = lex.MoveLookAhead()
 
 	if err != nil {
 		return
