@@ -679,7 +679,11 @@ func (lex *Lexical) uniqueSymbolCharacter(temp rune) {
 
 func (lex *Lexical) quoteCharacters() error {
 	var err error
+	charCount := 0
 	char := lex.LookAhead
+	if char == '\'' {
+		charCount = 1
+	}
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.LookAhead)
 	err = lex.MovelookAhead()
@@ -689,12 +693,17 @@ func (lex *Lexical) quoteCharacters() error {
 	}
 
 	for lex.LookAhead != char {
+		if char == '\'' && charCount > 1 {
+			return fmt.Errorf(custom_errors.InvalidMonodrone)
+		}
 		sbLexeme.WriteRune(lex.LookAhead)
 		err = lex.MovelookAhead()
 
 		if err != nil {
 			return err
 		}
+
+		charCount++
 	}
 
 	sbLexeme.WriteRune(lex.LookAhead)
@@ -745,7 +754,7 @@ func (lex *Lexical) displayConstructionToken() string {
 		return OutputComma
 	case TColon:
 		return OutputColon
-	case TSingleLineComment:
+	case TSingleQuote:
 		return OutputMonodrone
 	case TDoubleQuote:
 		return OutputOmnidrone
