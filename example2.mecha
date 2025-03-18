@@ -27,10 +27,10 @@
             count := 0
         } else {
             (varString2)Send
-            // Then print the value read
+            Then print the value read // 
             (varString2)Receive
             "" =: Omnidrone :varString2
-            // Lets read from the standard input into a new var
+            Lets read from the standard input into a new var //
             ("varBoolean2 == Active\n")Send
         } varBoolean2 elif {
             ("varBoolean1 == Inactive\n")Send
@@ -44,13 +44,13 @@
         */
 
         "Hello, World!" =: Omnidrone :varString1
-        STOPPED HERE // 'a' =: Monodrone :varChar1
-        varBoolean1, varBoolean2: State := Active, Inactive
-        varFloat1: Tensor := 1.23456
-        varInteger1, varInteger2: Gear := 1234, 4321
-        varNil: Nil := nil
-        // First we shall demonstrate how to allocate variables
+        'a' =: Monodrone :varChar1
+        Active, Inactive =: State :varBoolean2, varBoolean1 
+        1.23456 =: Tensor :varFloat1
+        4321, 1234 =: Gear :varInteger2, varInteger1
+        Nil =: Nil :varNil
+        First we shall demonstrate how to allocate variables //
 
-    } main() Architect
+    } ()main Architect
 
-} Construct main
+} main Construct
