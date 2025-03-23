@@ -323,7 +323,7 @@ func (lex *Lexical) MoveLookAhead() error {
 
 func (lex *Lexical) nextLine() error {
 	lex.CurrentLine--
-	if lex.CurrentLine > 0 {
+	if lex.CurrentLine >= 0 {
 		lex.InputLine = lex.Lines[lex.CurrentLine]
 		lex.Pointer = len(lex.InputLine) - 1
 		return nil
