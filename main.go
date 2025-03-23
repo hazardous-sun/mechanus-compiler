@@ -14,7 +14,7 @@ import (
 func main() {
 	// Initialize input and output files insde Lexical
 	lex := models.NewLexical(nil, nil)
-	inputFile, err := os.Open("example.mecha")
+	inputFile, err := os.Open("example3.mecha")
 
 	if err != nil {
 		customerrors.Log(customerrors.FileOpenError, &err, customerrors.ErrorLevel)
