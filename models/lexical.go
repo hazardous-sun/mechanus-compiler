@@ -286,8 +286,7 @@ func (lex *Lexical) ReadLines() error {
 		lex.CurrentLine = len(lex.Lines) - 1
 		lex.InputLine = lex.Lines[lex.CurrentLine]
 		lex.CurrentColumn = len(lex.InputLine)
-		lex.Pointer = lex.CurrentColumn - 1
-		lex.LookAhead = rune(lex.InputLine[lex.Pointer])
+		lex.Pointer = lex.CurrentColumn
 	}
 
 	return err
@@ -313,11 +312,12 @@ func (lex *Lexical) MoveLookAhead() error {
 				return err
 			}
 		}
+		lex.Pointer--
 	} else {
+		lex.Pointer--
+		lex.CurrentColumn = lex.Pointer + 1
 		lex.LookAhead = rune(lex.InputLine[lex.Pointer])
 	}
-	lex.Pointer--
-	lex.CurrentColumn = lex.Pointer + 1
 	return nil
 }
 
@@ -465,16 +465,10 @@ func matchesSingleCharSymbols(lookAhead rune) bool {
 // Processes alphabetical characters to form identifiers or keywords.
 func (lex *Lexical) alphabeticalCharacter() error {
 	sbLexeme := strings.Builder{}
-	sbLexeme.WriteRune(lex.LookAhead)
-	err := lex.MoveLookAhead()
-
-	if err != nil {
-		return err
-	}
 
 	for (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= 'a' && lex.LookAhead <= 'z') || (lex.LookAhead >= '0' && lex.LookAhead <= '9') || lex.LookAhead == '_' {
 		sbLexeme.WriteRune(lex.LookAhead)
-		err = lex.MoveLookAhead()
+		err := lex.MoveLookAhead()
 		if err != nil {
 			return err
 		}
