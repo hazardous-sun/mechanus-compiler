@@ -312,7 +312,6 @@ func (lex *Lexical) MoveLookAhead() error {
 				return err
 			}
 		}
-		lex.Pointer--
 	} else {
 		lex.Pointer--
 		lex.CurrentColumn = lex.Pointer + 1
