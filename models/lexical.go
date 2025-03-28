@@ -12,12 +12,13 @@ import (
 const (
 	//	 Construction tokens
 
-	TConstruct = 1
-	TArchitect = 2
-	TIntegrate = 3
-	TComma     = 4
-	TColon     = 5
-	TString    = 6
+	TConstruct   = 1
+	TArchitect   = 2
+	TIntegrate   = 3
+	TComma       = 4
+	TColon       = 5
+	TSingleQuote = 6
+	TDoubleQuote = 7
 
 	//	 Conditional and repetition tokens
 
@@ -64,7 +65,8 @@ const (
 	TState     = 404
 	TMonodrone = 405
 	TOmnidrone = 406
-	TId        = 407
+	TTypeName  = 407
+	TId        = 408
 
 	// Built-in functions
 
@@ -82,9 +84,10 @@ const (
 const (
 	//	 Construction tokens
 
-	Construct = "CONSTRUCT"
-	Architect = "ARCHITECT"
-	Integrate = "INTEGRATE"
+	Construct    = "CONSTRUCT"
+	Architect    = "ARCHITECT"
+	Integrate    = "INTEGRATE"
+	StringLexeme = "STRING"
 
 	//	 Conditional and repetition tokens
 
@@ -165,6 +168,7 @@ const (
 	OutputIntegrate = "T_INTEGRATE"
 	OutputComma     = "T_COMMA"
 	OutputColon     = "T_COLON"
+	OutputString    = "T_STRING"
 
 	//   Conditional and repetition tokens
 
@@ -182,6 +186,7 @@ const (
 	OutputState     = "T_STATE"
 	OutputMonodrone = "T_MONODRONE"
 	OutputOmnidrone = "T_OMNIDRONE"
+	OutputTypeName  = "T_TYPE"
 	OutputId        = "T_ID"
 
 	//   Structure tokens
@@ -333,7 +338,7 @@ func (lex *Lexical) NextToken() error {
 	} else if lex.isNumericalCharacter() {
 		err = lex.numericalCharacter()
 	} else if lex.isString() {
-		err = lex.stringCharacters()
+		err = lex.quoteCharacters()
 	} else {
 		err = lex.symbolCharacter()
 	}
@@ -367,8 +372,8 @@ func (lex *Lexical) multilineCommentEnd() bool {
 	// Checks that pointing to lex.Pointer+1 won't raise an index out of bound exception
 	// AND
 	// Checks if the current char + the next char == CloseMultilineComment
-	if lex.Pointer+1 < len(lex.InputLine) {
-		temp := fmt.Sprintf("%c%c", lex.LookAhead, lex.InputLine[lex.Pointer+1])
+	if lex.Pointer+1 <= len(lex.InputLine) && lex.LookAhead == '*' {
+		temp := fmt.Sprintf("%c%c", lex.LookAhead, lex.InputLine[lex.Pointer])
 		if temp == CloseMultilineComment {
 			return true
 		}
@@ -465,18 +470,18 @@ func (lex *Lexical) alphabeticalCharacter() error {
 	case Detach:
 		lex.Token = TDetach
 	case Nil:
-		lex.Token = TNil
+		lex.Token = TTypeName
 	// Types
 	case Gear:
-		lex.Token = TGear
+		lex.Token = TTypeName
 	case Tensor:
-		lex.Token = TTensor
+		lex.Token = TTypeName
 	case State:
-		lex.Token = TState
+		lex.Token = TTypeName
 	case Monodrone:
-		lex.Token = TMonodrone
+		lex.Token = TTypeName
 	case Omnidrone:
-		lex.Token = TOmnidrone
+		lex.Token = TTypeName
 	// Built-in functions
 	case Send:
 		lex.Token = TSend
@@ -615,8 +620,9 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 	return err
 }
 
-func (lex *Lexical) stringCharacters() error {
+func (lex *Lexical) quoteCharacters() error {
 	var err error
+	char := lex.LookAhead
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.LookAhead)
 	err = lex.MovelookAhead()
@@ -637,7 +643,12 @@ func (lex *Lexical) stringCharacters() error {
 	sbLexeme.WriteRune(lex.LookAhead)
 	err = lex.MovelookAhead()
 	lex.Lexeme = sbLexeme.String()
-	lex.Token = TString
+	switch char {
+	case '"':
+		lex.Token = TDoubleQuote
+	case '\'':
+		lex.Token = TSingleQuote
+	}
 	return err
 }
 
@@ -646,7 +657,7 @@ func (lex *Lexical) stringCharacters() error {
 func (lex *Lexical) DisplayToken() {
 	var tokenLexeme string
 
-	if lex.Token >= TConstruct && lex.Token <= TString {
+	if lex.Token >= TConstruct && lex.Token <= TDoubleQuote {
 		tokenLexeme = lex.displayConstructionToken()
 	} else if lex.Token >= TIf && lex.Token <= TDetach {
 		tokenLexeme = lex.displayConditionalRepetitionToken()
@@ -677,7 +688,9 @@ func (lex *Lexical) displayConstructionToken() string {
 		return OutputComma
 	case TColon:
 		return OutputColon
-	case TString:
+	case TSingleLineComment:
+		return OutputMonodrone
+	case TDoubleQuote:
 		return OutputOmnidrone
 	default:
 		return "N/A"
@@ -716,7 +729,9 @@ func (lex *Lexical) displayTypeToken() string {
 	case TMonodrone:
 		return OutputMonodrone
 	case TOmnidrone:
-		return OutputTensor
+		return OutputOmnidrone
+	case TTypeName:
+		return OutputTypeName
 	case TId:
 		return OutputId
 	default:
