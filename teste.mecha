@@ -1,0 +1,19 @@
+Construct main
+
+Architect main() -> Gear {
+    var1, var2: Gear := 1234, 4321
+
+    if
+
+    Integrate 0
+}
+
+Architect pow(v1, v2: Gear) Gear {
+    counter: Gear = 0
+
+    for counter < v2 {
+        v1 *= v1
+    }
+
+    Integrate v1
+}
