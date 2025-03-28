@@ -30,6 +30,13 @@ func main() {
 	defer lex.Close("output")
 
 	// Start looking for tokens
+	err = lex.ReadLines()
+
+	if err != nil {
+		customerrors.Log(customerrors.EmptyFile, &err, customerrors.ErrorLevel)
+		return
+	}
+
 	lex.MovelookAhead()
 
 	for lex.Token != models.TInputEnd && lex.Token != models.TLexError {
