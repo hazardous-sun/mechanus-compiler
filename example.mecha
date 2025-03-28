@@ -1,56 +1,7 @@
 {
-    {
-        Integrate n1
-
-        {
-            count = count + 1
-            n1 = n1 + n1
-        } for count < n2
-
-        count: Gear = 0
-    } Gear manualMultiplication(n1, n2: Gear) Architect
-
-    {
-        Integrate 0
-
-        result: Gear := manualMultiplication(varInteger1, varInteger2)
-
-        {
-            {
-                count = count + 1
-                {
-                    Send("what?")
-                    detach
-                } if 20 < 30
-                Send("All hail Mechanus!\n")
-            } for count <= 100
-            count := 0
-        } else {
-            Send(varString2)
-            // Then print the value read
-            Receive(varString2)
-            varString2: Omnidrone = ""
-            // Lets read from the standard input into a new var
-            Send("varBoolean2 == Active\n")
-        } elif varBoolean2 {
-            Send("varBoolean1 == Inactive\n")
-        } if !varBoolean1
-
-        /*
-            This is a multiline comment...
-            This one as well
-            Another one
-            Multiple lines, one block
-        */
-
-        varString1: Omnidrone := "Hello, World!"
-        varChar1: Monodrone := 'a'
-        varBoolean1, varBoolean2: State := Active, Inactive
-        varFloat1: Tensor := 1.23456
-        varInteger1, varInteger2: Gear := 1234, 4321
-        varNil: Nil := nil
-        // First we shall demonstrate how to allocate variables
-
-    } main() Architect
-
-} Construct main
+   {
+        0 Integrate
+        (text)Send
+        "Hello, world!" =: Omnidrone :text
+   } ()main Architect
+} main Construct
