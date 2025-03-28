@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	custom_errors "mechanus-compiler/error"
+	customerrors "mechanus-compiler/error"
 	"mechanus-compiler/models"
 	"os"
 )
@@ -14,7 +14,7 @@ func main() {
 	inputFile, err := os.Open("example.mecha")
 
 	if err != nil {
-		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
+		customerrors.Log(customerrors.FileOpenError, &err, customerrors.ErrorLevel)
 		return
 	}
 	lex.InputFile = inputFile
@@ -23,19 +23,14 @@ func main() {
 	outputFile, err := os.Create("output")
 
 	if err != nil {
-		custom_errors.Log(custom_errors.FileCreateError, &err, custom_errors.ErrorLevel)
+		customerrors.Log(customerrors.FileCreateError, &err, customerrors.ErrorLevel)
 		return
 	}
 	lex.OutputFile = outputFile
 	defer lex.Close("output")
 
 	// Start looking for tokens
-	err = lex.MovelookAhead()
-
-	if err != nil {
-		custom_errors.Log(custom_errors.EmptyFile, &err, custom_errors.ErrorLevel)
-		return
-	}
+	lex.MovelookAhead()
 
 	for lex.Token != models.TInputEnd && lex.Token != models.TLexError {
 		lex.NextToken()
@@ -44,9 +39,9 @@ func main() {
 
 	if lex.Token == models.TLexError {
 		err = errors.New(lex.ErrorMessage)
-		custom_errors.Log(fmt.Sprintf("Lexical error: %s", lex.ErrorMessage), &err, custom_errors.ErrorLevel)
+		customerrors.Log(fmt.Sprintf("Lexical error: %s", lex.ErrorMessage), &err, customerrors.ErrorLevel)
 	} else {
-		fmt.Println("Lexical analys completed with no errors")
+		fmt.Println("Lexical analysis completed with no errors")
 		err = lex.WriteOutput()
 	}
 
