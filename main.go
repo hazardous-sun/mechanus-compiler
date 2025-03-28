@@ -30,23 +30,26 @@ func main() {
 	defer lex.Close("output")
 
 	// Start looking for tokens
+	err = lex.MovelookAhead()
 
-	lex.movelookAhead()
-
-	for lex.token != models.TInputEnd && lex.token != TLexError {
-		lex.nextToken()
-		lex.displayToken()
+	if err != nil {
+		custom_errors.Log(custom_errors.EmptyFile, &err, custom_errors.ErrorLevel)
+		return
 	}
 
-	if lex.token == TLexError {
-		err = errors.New(lex.errorMessage)
-		custom_errors.Log(fmt.Sprintf("Lexical error: %s", lex.errorMessage), &err, custom_errors.ErrorLevel)
+	for lex.Token != models.TInputEnd && lex.Token != models.TLexError {
+		lex.NextToken()
+		lex.DisplayToken()
+	}
+
+	if lex.Token == models.TLexError {
+		err = errors.New(lex.ErrorMessage)
+		custom_errors.Log(fmt.Sprintf("Lexical error: %s", lex.ErrorMessage), &err, custom_errors.ErrorLevel)
 	} else {
 		fmt.Println("Lexical analys completed with no errors")
+		err = lex.WriteOutput()
 	}
 
-	lex.showTokens()
-	lex.writeOutput()
-
-	return lex.lexeme, err
+	lex.ShowTokens()
+	return
 }
