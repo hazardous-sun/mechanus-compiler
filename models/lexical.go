@@ -297,14 +297,15 @@ func (lex *Lexical) ReadLines() error {
 // line.
 func (lex *Lexical) MoveLookAhead() error {
 	// end of line reached
-	if lex.Pointer-1 < 0 {
+	lex.Pointer--
+	if lex.Pointer < 0 {
 		err := lex.nextLine()
 
 		if err != nil {
 			return err
 		}
 
-		if len(lex.InputLine) > 1 {
+		if len(lex.InputLine) >= 1 {
 			lex.LookAhead = rune(lex.InputLine[lex.Pointer])
 		} else {
 			err := lex.MoveLookAhead()
@@ -313,7 +314,6 @@ func (lex *Lexical) MoveLookAhead() error {
 			}
 		}
 	} else {
-		lex.Pointer--
 		lex.CurrentColumn = lex.Pointer + 1
 		lex.LookAhead = rune(lex.InputLine[lex.Pointer])
 	}

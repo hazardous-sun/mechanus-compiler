@@ -48,11 +48,13 @@ func main() {
 
 	for lex.Token != models.TInputEnd && lex.Token != models.TLexError {
 		err = lex.NextToken()
-		if err != nil {
-			break
-		}
+
 		if !comment(&lex) {
 			lex.DisplayToken()
+		}
+
+		if err != nil {
+			break
 		}
 	}
 
