@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"go/scanner"
 	custom_errors "mechanus-compiler/error"
 	"os"
 	"strings"
@@ -11,85 +10,85 @@ import (
 
 // Constants for token types
 const (
-	T_PROGRAMA      = 1
-	T_FIM           = 2
-	T_VARIAVEIS     = 3
-	T_VIRGULA       = 4
-	T_PONTO_VIRGULA = 5
-	T_SE            = 6
-	T_SENAO         = 7
-	T_FIM_SE        = 8
-	T_ENQUANTO      = 9
-	T_FIM_ENQUANTO  = 10
-	T_PARA          = 11
-	T_SETA          = 12
-	T_ATE           = 13
-	T_FIM_PARA      = 14
-	T_LER           = 15
-	T_ABRE_PAR      = 16
-	T_FECHA_PAR     = 17
-	T_ESCREVER      = 18
-	T_MAIOR         = 19
-	T_MENOR         = 20
-	T_MAIOR_IGUAL   = 21
-	T_MENOR_IGUAL   = 22
-	T_IGUAL         = 23
-	T_DIFERENTE     = 24
-	T_MAIS          = 25
-	T_MENOS         = 26
-	T_VEZES         = 27
-	T_DIVIDIDO      = 28
-	T_RESTO         = 29
-	T_ELEVADO       = 30
-	T_NUMERO        = 31
-	T_ID            = 32
-	T_FIM_FONTE     = 90
-	T_ERRO_LEX      = 98
-	T_NULO          = 99
-	FIM_ARQUIVO     = 26
+	TProgram    = 1
+	TEnd        = 2
+	TVariable   = 3
+	TComma      = 4
+	TSemiColon  = 5
+	TIf         = 6
+	TElse       = 7
+	TEndIf      = 8
+	TWhile      = 9
+	TEndWhile   = 10
+	TBreak      = 11
+	TSeta       = 12
+	TAte        = 13
+	TFimPara    = 14
+	TLer        = 15
+	TAbrePar    = 16
+	TFechaPar   = 17
+	TEscrever   = 18
+	TMaior      = 19
+	TMenor      = 20
+	TMaiorIgual = 21
+	TMenorIgual = 22
+	TIgual      = 23
+	TDiferente  = 24
+	TMais       = 25
+	TMenos      = 26
+	TVezes      = 27
+	TDividido   = 28
+	TResto      = 29
+	TElevado    = 30
+	TNumero     = 31
+	TId         = 32
+	TFimFonte   = 90
+	TErroLex    = 98
+	TNulo       = 99
+	FimArquivo  = 26
 )
 
 // Lexical struct to hold lexical analyzer state
 type Lexical struct {
-	inputFile           *os.File
-	rdFonte             *bufio.Reader
-	outputFile          *os.File
-	lookAhead           rune
-	token               int
-	lexema              string
-	ponteiro            int
-	linhaFonte          string
-	linhaAtual          int
-	colunaAtual         int
-	mensagemDeErro      string
-	tokensIdentificados strings.Builder
+	inputFile        *os.File
+	rdFonte          *bufio.Reader
+	outputFile       *os.File
+	lookAhead        rune
+	token            int
+	lexeme           string
+	pointer          int
+	inputLine        string
+	currentLine      int
+	currentColumn    int
+	errorMessage     string
+	identifiedTokens strings.Builder
 }
 
-func (lex *Lexical) GetToken() (string, error) {
-	err := lex.open()
+func (lex *Lexical) GetToken(inputFile string) (string, error) {
+	err := lex.open(inputFile)
 
 	if err != nil {
 		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
 		return "", err
 	}
-	defer lex.close()
+	defer lex.close("input")
 
-	lex.linhaAtual = 0
-	lex.colunaAtual = 0
-	lex.ponteiro = 0
-	lex.linhaFonte = ""
-	lex.token = T_NULO
-	lex.mensagemDeErro = ""
+	lex.currentLine = 0
+	lex.currentColumn = 0
+	lex.pointer = 0
+	lex.inputLine = ""
+	lex.token = TNulo
+	lex.errorMessage = ""
 
 	lex.movelookAhead()
 
-	for lex.token != T_FIM_FONTE && lex.token != T_ERRO_LEX {
+	for lex.token != TFimFonte && lex.token != TErroLex {
 		lex.buscaProximoToken()
 		lex.mostraToken()
 	}
 
-	if lex.token == T_ERRO_LEX {
-		fmt.Println("Erro Léxico:", lex.mensagemDeErro)
+	if lex.token == TErroLex {
+		fmt.Println("Erro Léxico:", lex.errorMessage)
 	} else {
 		fmt.Println("Análise Léxica terminada sem erros léxicos")
 	}
@@ -99,24 +98,24 @@ func (lex *Lexical) GetToken() (string, error) {
 }
 
 func (lex *Lexical) movelookAhead() error {
-	if lex.ponteiro+1 > len(lex.linhaFonte) {
-		lex.linhaAtual++
-		lex.ponteiro = 0
+	if lex.pointer+1 > len(lex.inputLine) {
+		lex.currentLine++
+		lex.pointer = 0
 		line, err := lex.rdFonte.ReadString('\n')
 		if err != nil {
-			lex.lookAhead = FIM_ARQUIVO
+			lex.lookAhead = FimArquivo
 			return err
 		}
-		lex.linhaFonte = line
-		lex.lookAhead = rune(lex.linhaFonte[lex.ponteiro])
+		lex.inputLine = line
+		lex.lookAhead = rune(lex.inputLine[lex.pointer])
 	} else {
-		lex.lookAhead = rune(lex.linhaFonte[lex.ponteiro])
+		lex.lookAhead = rune(lex.inputLine[lex.pointer])
 	}
 	if lex.lookAhead >= 'a' && lex.lookAhead <= 'z' {
 		lex.lookAhead = lex.lookAhead - 'a' + 'A'
 	}
-	lex.ponteiro++
-	lex.colunaAtual = lex.ponteiro + 1
+	lex.pointer++
+	lex.currentColumn = lex.pointer + 1
 	return nil
 }
 
@@ -136,37 +135,37 @@ func (lex *Lexical) buscaProximoToken() error {
 			lex.movelookAhead()
 		}
 
-		lex.lexema = sbLexema.String()
+		lex.lexeme = sbLexema.String()
 
-		switch lex.lexema {
+		switch lex.lexeme {
 		case "PROGRAMA":
-			lex.token = T_PROGRAMA
+			lex.token = TProgram
 		case "FIM":
-			lex.token = T_FIM
+			lex.token = TEnd
 		case "VARIAVEIS":
-			lex.token = T_VARIAVEIS
+			lex.token = TVariable
 		case "SE":
-			lex.token = T_SE
+			lex.token = TIf
 		case "SENAO":
-			lex.token = T_SENAO
+			lex.token = TElse
 		case "FIM_SE":
-			lex.token = T_FIM_SE
+			lex.token = TEndIf
 		case "ENQUANTO":
-			lex.token = T_ENQUANTO
+			lex.token = TWhile
 		case "FIM_ENQUANTO":
-			lex.token = T_FIM_ENQUANTO
+			lex.token = TEndWhile
 		case "PARA":
-			lex.token = T_PARA
+			lex.token = TBreak
 		case "ATE":
-			lex.token = T_ATE
+			lex.token = TAte
 		case "FIM_PARA":
-			lex.token = T_FIM_PARA
+			lex.token = TFimPara
 		case "LER":
-			lex.token = T_LER
+			lex.token = TLer
 		case "ESCREVER":
-			lex.token = T_ESCREVER
+			lex.token = TEscrever
 		default:
-			lex.token = T_ID
+			lex.token = TId
 		}
 	} else if lex.lookAhead >= '0' && lex.lookAhead <= '9' {
 		sbLexema.WriteRune(lex.lookAhead)
@@ -175,132 +174,137 @@ func (lex *Lexical) buscaProximoToken() error {
 			sbLexema.WriteRune(lex.lookAhead)
 			lex.movelookAhead()
 		}
-		lex.token = T_NUMERO
+		lex.token = TNumero
 	} else {
 		switch lex.lookAhead {
 		case '(':
-			lex.token = T_ABRE_PAR
+			lex.token = TAbrePar
 		case ')':
-			lex.token = T_FECHA_PAR
+			lex.token = TFechaPar
 		case ';':
-			lex.token = T_PONTO_VIRGULA
+			lex.token = TSemiColon
 		case ',':
-			lex.token = T_VIRGULA
+			lex.token = TComma
 		case '+':
-			lex.token = T_MAIS
+			lex.token = TMais
 		case '-':
-			lex.token = T_MENOS
+			lex.token = TMenos
 		case '*':
-			lex.token = T_VEZES
+			lex.token = TVezes
 		case '/':
-			lex.token = T_DIVIDIDO
+			lex.token = TDividido
 		case '%':
-			lex.token = T_RESTO
+			lex.token = TResto
 		case '<':
-			lex.token = T_MENOR
+			lex.token = TMenor
 		case '>':
-			lex.token = T_MAIOR
+			lex.token = TMaior
 		case '=':
-			lex.token = T_IGUAL
-		case FIM_ARQUIVO:
-			lex.token = T_FIM_FONTE
+			lex.token = TIgual
+		case FimArquivo:
+			lex.token = TFimFonte
 		default:
-			lex.token = T_ERRO_LEX
-			lex.mensagemDeErro = fmt.Sprintf("Erro Léxico na linha: %d\nReconhecido ao atingir a coluna: %d\nLinha do Erro: <%s>\nToken desconhecido: %c", lex.linhaAtual, lex.colunaAtual, lex.linhaFonte, lex.lookAhead)
+			lex.token = TErroLex
+			lex.errorMessage = fmt.Sprintf("Erro Léxico na linha: %d\nReconhecido ao atingir a coluna: %d\nLinha do Erro: <%s>\nToken desconhecido: %c", lex.currentLine, lex.currentColumn, lex.inputLine, lex.lookAhead)
 		}
 		sbLexema.WriteRune(lex.lookAhead)
 		lex.movelookAhead()
 	}
 
-	lex.lexema = sbLexema.String()
+	lex.lexeme = sbLexema.String()
 	return nil
 }
 
 func (lex *Lexical) mostraToken() {
 	var tokenLexema string
 	switch lex.token {
-	case T_PROGRAMA:
+	case TProgram:
 		tokenLexema = "T_PROGRAMA"
-	case T_FIM:
+	case TEnd:
 		tokenLexema = "T_FIM"
-	case T_VARIAVEIS:
+	case TVariable:
 		tokenLexema = "T_VARIAVEIS"
-	case T_VIRGULA:
+	case TComma:
 		tokenLexema = "T_VIRGULA"
-	case T_PONTO_VIRGULA:
+	case TSemiColon:
 		tokenLexema = "T_PONTO_VIRGULA"
-	case T_SE:
+	case TIf:
 		tokenLexema = "T_SE"
-	case T_SENAO:
+	case TElse:
 		tokenLexema = "T_SENAO"
-	case T_FIM_SE:
+	case TEndIf:
 		tokenLexema = "T_FIM_SE"
-	case T_ENQUANTO:
+	case TWhile:
 		tokenLexema = "T_ENQUANTO"
-	case T_FIM_ENQUANTO:
+	case TEndWhile:
 		tokenLexema = "T_FIM_ENQUANTO"
-	case T_PARA:
+	case TBreak:
 		tokenLexema = "T_PARA"
-	case T_SETA:
+	case TSeta:
 		tokenLexema = "T_SETA"
-	case T_ATE:
+	case TAte:
 		tokenLexema = "T_ATE"
-	case T_FIM_PARA:
+	case TFimPara:
 		tokenLexema = "T_FIM_PARA"
-	case T_LER:
+	case TLer:
 		tokenLexema = "T_LER"
-	case T_ABRE_PAR:
+	case TAbrePar:
 		tokenLexema = "T_ABRE_PAR"
-	case T_FECHA_PAR:
+	case TFechaPar:
 		tokenLexema = "T_FECHA_PAR"
-	case T_ESCREVER:
+	case TEscrever:
 		tokenLexema = "T_ESCREVER"
-	case T_MAIOR:
+	case TMaior:
 		tokenLexema = "T_MAIOR"
-	case T_MENOR:
+	case TMenor:
 		tokenLexema = "T_MENOR"
-	case T_MAIOR_IGUAL:
+	case TMaiorIgual:
 		tokenLexema = "T_MAIOR_IGUAL"
-	case T_MENOR_IGUAL:
+	case TMenorIgual:
 		tokenLexema = "T_MENOR_IGUAL"
-	case T_IGUAL:
+	case TIgual:
 		tokenLexema = "T_IGUAL"
-	case T_DIFERENTE:
+	case TDiferente:
 		tokenLexema = "T_DIFERENTE"
-	case T_MAIS:
+	case TMais:
 		tokenLexema = "T_MAIS"
-	case T_MENOS:
+	case TMenos:
 		tokenLexema = "T_MENOS"
-	case T_VEZES:
+	case TVezes:
 		tokenLexema = "T_VEZES"
-	case T_DIVIDIDO:
+	case TDividido:
 		tokenLexema = "T_DIVIDIDO"
-	case T_RESTO:
+	case TResto:
 		tokenLexema = "T_RESTO"
-	case T_ELEVADO:
+	case TElevado:
 		tokenLexema = "T_ELEVADO"
-	case T_NUMERO:
+	case TNumero:
 		tokenLexema = "T_NUMERO"
-	case T_ID:
+	case TId:
 		tokenLexema = "T_ID"
-	case T_FIM_FONTE:
+	case TFimFonte:
 		tokenLexema = "T_FIM_FONTE"
-	case T_ERRO_LEX:
+	case TErroLex:
 		tokenLexema = "T_ERRO_LEX"
-	case T_NULO:
+	case TNulo:
 		tokenLexema = "T_NULO"
 	default:
 		tokenLexema = "N/A"
 	}
-	fmt.Println(tokenLexema + " ( " + lex.lexema + " )")
-	lex.acumulaToken(tokenLexema + " ( " + lex.lexema + " )")
+	fmt.Println(tokenLexema + " ( " + lex.lexeme + " )")
+	lex.acumulaToken(tokenLexema + " ( " + lex.lexeme + " )")
 }
 
-func (lex *Lexical) open() error {
-	file, err := os.Open("input.grm")
+func (lex *Lexical) open(fileName string) error {
+	custom_errors.Log(fmt.Sprintf("opening '%s' file", fileName), nil, custom_errors.InfoLevel)
+	file, err := os.Open(fileName)
+
 	if err != nil {
+		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
 		return err
 	}
+
+	custom_errors.Log(custom_errors.FileOpenError, nil, custom_errors.ErrorLevel)
 	lex.inputFile = file
 	lex.rdFonte = bufio.NewReader(file)
 	return nil
@@ -308,8 +312,9 @@ func (lex *Lexical) open() error {
 
 func (lex *Lexical) close(file string) error {
 	custom_errors.Log(fmt.Sprintf("closing %s file", file), nil, custom_errors.InfoLevel)
+
 	switch file {
-	case "source":
+	case "input":
 		err := lex.inputFile.Close()
 		if err != nil {
 			custom_errors.Log(custom_errors.FileCloseError, &err, custom_errors.ErrorLevel)
@@ -322,7 +327,9 @@ func (lex *Lexical) close(file string) error {
 			return err
 		}
 	}
+
 	custom_errors.Log(custom_errors.FileCloseSuccess, nil, custom_errors.InfoLevel)
+	return nil
 }
 
 func (lex *Lexical) gravaSaida() error {
@@ -335,7 +342,7 @@ func (lex *Lexical) gravaSaida() error {
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(lex.tokensIdentificados.String())
+	_, err = file.WriteString(lex.identifiedTokens.String())
 	if err != nil {
 		return err
 	}
@@ -344,11 +351,11 @@ func (lex *Lexical) gravaSaida() error {
 }
 
 func (lex *Lexical) exibeTokens() {
-	fmt.Println("Tokens Identificados (token/lexema):")
-	fmt.Println(lex.tokensIdentificados.String())
+	fmt.Println("Tokens Identificados (token/lexeme):")
+	fmt.Println(lex.identifiedTokens.String())
 }
 
 func (lex *Lexical) acumulaToken(tokenIdentificado string) {
-	lex.tokensIdentificados.WriteString(tokenIdentificado)
-	lex.tokensIdentificados.WriteString("\n")
+	lex.identifiedTokens.WriteString(tokenIdentificado)
+	lex.identifiedTokens.WriteString("\n")
 }
