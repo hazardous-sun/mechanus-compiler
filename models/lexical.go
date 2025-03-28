@@ -235,6 +235,7 @@ func NewLexical(inputFile, outputFile *os.File) Lexical {
 	lex := Lexical{
 		InputFile:     inputFile,
 		OutputFile:    outputFile,
+		RdInput:       bufio.NewReader(inputFile),
 		CurrentLine:   0,
 		CurrentColumn: 0,
 		Pointer:       0,
