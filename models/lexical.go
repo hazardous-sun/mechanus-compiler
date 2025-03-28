@@ -328,7 +328,33 @@ func (lex *Lexical) isString() bool {
 }
 
 func (lex *Lexical) isMultiCharacterSymbol() bool {
-	return (lex.Pointer+1) <= len(lex.InputLine) && (lex.InputLine[lex.Pointer+1] >= '&' && lex.InputLine[lex.Pointer+1] <= '/')
+	if matchesSingleCharSymbols(lex.LookAhead) {
+		return false
+	}
+	return (lex.Pointer+1) < len(lex.InputLine) && (lex.InputLine[lex.Pointer+1] >= '&' && lex.InputLine[lex.Pointer+1] <= '/')
+}
+
+func matchesSingleCharSymbols(lookAhead rune) bool {
+	switch lookAhead {
+	// Construction
+	case Comma:
+		return true
+	case Colon:
+		return true
+	case String:
+		return true
+	// Structure
+	case OpenParentheses:
+		return true
+	case CloseParentheses:
+		return true
+	case OpenBraces:
+		return true
+	case CloseBraces:
+		return true
+	default:
+		return false
+	}
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
