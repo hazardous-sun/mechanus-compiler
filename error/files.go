@@ -12,4 +12,6 @@ const (
 
 	FileCloseSuccess = "successfully closed the file"
 	FileCloseError   = "unable to close file"
+
+	EndOfFileReached = "end of file reached"
 )
