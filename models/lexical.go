@@ -116,9 +116,10 @@ const (
 const (
 	// Construction tokens
 
-	Comma  = ','
-	Colon  = ':'
-	String = '"'
+	Comma       = ','
+	Colon       = ':'
+	DoubleQuote = '"'
+	SingleQuote = '\''
 
 	//	 Structure tokens
 
@@ -417,7 +418,9 @@ func matchesSingleCharSymbols(lookAhead rune) bool {
 		return true
 	case Colon:
 		return true
-	case String:
+	case DoubleQuote:
+		return true
+	case SingleQuote:
 		return true
 	// Structure
 	case OpenParentheses:
@@ -596,6 +599,7 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 	}
 
 	lex.Lexeme = sbLexeme.String()
+	uniqueSymbol := false
 
 	switch lex.Lexeme {
 	// Construction tokens
@@ -626,6 +630,7 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 	case DeclarationOperator:
 		lex.Token = TDeclarationOperator
 	default:
+		uniqueSymbol = true
 		lex.uniqueSymbolCharacter(temp)
 	}
 
@@ -633,7 +638,10 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 		return err
 	}
 
-	lex.Lexeme = sbLexeme.String()
+	if !uniqueSymbol {
+		lex.Lexeme = sbLexeme.String()
+	}
+
 	return err
 }
 
@@ -661,9 +669,9 @@ func (lex *Lexical) quoteCharacters() error {
 	err = lex.MovelookAhead()
 	lex.Lexeme = sbLexeme.String()
 	switch char {
-	case '"':
+	case DoubleQuote:
 		lex.Token = TDoubleQuote
-	case '\'':
+	case SingleQuote:
 		lex.Token = TSingleQuote
 	}
 	return err
@@ -674,16 +682,16 @@ func (lex *Lexical) quoteCharacters() error {
 func (lex *Lexical) DisplayToken() {
 	var tokenLexeme string
 
-	if lex.Token >= TConstruct && lex.Token <= TDoubleQuote {
+	if lex.Token >= TConstruct && lex.Token < TIf {
 		tokenLexeme = lex.displayConstructionToken()
-	} else if lex.Token >= TIf && lex.Token <= TDetach {
+	} else if lex.Token >= TIf && lex.Token < TOpenParentheses {
 		tokenLexeme = lex.displayConditionalRepetitionToken()
-	} else if lex.Token >= TNil && lex.Token <= TId {
-		tokenLexeme = lex.displayTypeToken()
-	} else if lex.Token >= TOpenParentheses && lex.Token <= TCloseMultilineComment {
+	} else if lex.Token >= TOpenParentheses && lex.Token < TGreaterThanOperator {
 		tokenLexeme = lex.displayStructureToken()
-	} else if lex.Token >= TGreaterThanOperator && lex.Token <= TNotOperator {
+	} else if lex.Token >= TGreaterThanOperator && lex.Token <= TNil {
 		tokenLexeme = lex.displayOperatorToken()
+	} else if lex.Token >= TNil && lex.Token <= TSend {
+		tokenLexeme = lex.displayTypeToken()
 	} else {
 		tokenLexeme = lex.displayFunctions()
 	}
@@ -803,8 +811,6 @@ func (lex *Lexical) displayOperatorToken() string {
 		return OutputDivisionOperator
 	case TModuleOperator:
 		return OutputModuleOperator
-	case NotOperator:
-		return OutputNotOperator
 	case TAndOperator:
 		return OutputAndOperator
 	case TOrOperator:
