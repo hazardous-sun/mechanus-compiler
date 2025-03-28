@@ -13,39 +13,40 @@ import (
 const (
 	//	 Construction tokens
 
-	TModule   = 1
-	TVariable = 2
-	TComma    = 3
+	TConstruct = 1 // "CONSTRUCT"
+	TComma     = 2 // ","
+	TFunction  = 3 // "ARCHITECT"
+	TReturn    = 4 // "INTEGRATE"
 
 	//	 Conditional and repetition tokens
 
-	TIf     = 100
-	TElse   = 101
-	TElseIf = 102
-	TFor    = 103
-	TBreak  = 104
+	TIf     = 100 // "IF"
+	TElse   = 101 // "ELSE"
+	TElseIf = 102 // "ELIF"
+	TFor    = 103 // "FOR"
+	TBreak  = 104 // "DETACH"
 
 	//	 Structure tokens
 
-	TOpenParentheses  = 200
-	TCloseParentheses = 201
-	TOpenBraces       = 202
-	TCloseBraces      = 203
+	TOpenParentheses  = 200 // "("
+	TCloseParentheses = 201 // ")"
+	TOpenBraces       = 202 // "{"
+	TCloseBraces      = 203 // "}"
 
 	//	 Operator tokens
 
-	TGreaterThanOperator    = 301
-	TLessThanOperator       = 302
-	TGreaterEqualOperator   = 303
-	TLessEqualOperator      = 304
-	TEqualOperator          = 305
-	TNotEqualOperator       = 306
-	TAdditionOperator       = 307
-	TSubtractionOperator    = 308
-	TMultiplicationOperator = 309
-	TDivisionOperator       = 310
-	TModuleOperator         = 311
-	TExponentiationOperator = 312
+	TGreaterThanOperator    = 301 // ">"
+	TLessThanOperator       = 302 // "<"
+	TGreaterEqualOperator   = 303 // "
+	TLessEqualOperator      = 304 // <=
+	TEqualOperator          = 305 // ==
+	TNotEqualOperator       = 306 // !=
+	TAdditionOperator       = 307 // +
+	TSubtractionOperator    = 308 // -
+	TMultiplicationOperator = 309 // *
+	TDivisionOperator       = 310 // /
+	TModuleOperator         = 311 // %
+	TExponentiationOperator = 312 // **
 
 	//	 Type tokens
 
@@ -168,20 +169,20 @@ func (lex *lexical) alphabeticalCharacter(sbLexeme strings.Builder) {
 
 	lex.lexeme = sbLexeme.String()
 
-	switch lex.lexeme {
-	case "PROGRAMA":
-		lex.token = TModule
-	case "VARIAVEIS":
+	switch strings.ToUpper(lex.lexeme) {
+	case "CONSTRUCT":
+		lex.token = TConstruct
+	case "VARIABLES":
 		lex.token = TVariable
-	case "SE":
+	case "IF":
 		lex.token = TIf
-	case "SENAO":
+	case "ELSE":
 		lex.token = TElse
 	case "ELSE_IF":
 		lex.token = TElseIf
-	case "ENQUANTO":
+	case "FOR":
 		lex.token = TFor
-	case "PARA":
+	case "BREAK":
 		lex.token = TBreak
 	default:
 		lex.token = TId
@@ -204,6 +205,10 @@ func (lex *lexical) symbolCharacter(sbLexeme strings.Builder) {
 		lex.token = TOpenParentheses
 	case ')':
 		lex.token = TCloseParentheses
+	case '{':
+		lex.token = TOpenBraces
+	case '}':
+		lex.token = TCloseBraces
 	case ',':
 		lex.token = TComma
 	case '+':
@@ -222,8 +227,6 @@ func (lex *lexical) symbolCharacter(sbLexeme strings.Builder) {
 		lex.token = TGreaterThanOperator
 	case '=':
 		lex.token = TEqualOperator
-	case EOF:
-		lex.token = TInputEnd
 	default:
 		lex.token = TLexError
 		lex.errorMessage = fmt.Sprintf("Erro Léxico na linha: %d\nReconhecido ao atingir a coluna: %d\nLinha do Erro: <%s>\nToken desconhecido: %c", lex.currentLine, lex.currentColumn, lex.inputLine, lex.lookAhead)
@@ -237,7 +240,7 @@ func (lex *lexical) symbolCharacter(sbLexeme strings.Builder) {
 func (lex *lexical) displayToken() {
 	var tokenLexeme string
 	switch lex.token {
-	case TModule:
+	case TConstruct:
 		tokenLexeme = "T_MODULE"
 	case TVariable:
 		tokenLexeme = "T_VARIABLE"
