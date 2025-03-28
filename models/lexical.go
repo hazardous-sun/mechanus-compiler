@@ -106,8 +106,8 @@ const (
 
 	// Built-in functions
 
-	Send      = "SEND"
-	Receive   = "RECEIVE"
+	Send    = "SEND"
+	Receive = "RECEIVE"
 )
 
 // Constants for unique-symbol tokens
@@ -317,15 +317,13 @@ func (lex *Lexical) alphabeticalCharacter() string {
 	lex.MovelookAhead()
 
 	for (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= '0' && lex.LookAhead <= '9') || lex.LookAhead == '_' {
-		if sbLexeme.String() == {
-		}
 		sbLexeme.WriteRune(lex.LookAhead)
 		lex.MovelookAhead()
 	}
 
 	lex.Lexeme = sbLexeme.String()
 
-	switch strings.ToUpper(lex.Lexeme) {
+	switch lex.Lexeme {
 	// Construction tokens
 	case Construct:
 		lex.Token = TConstruct
@@ -357,6 +355,11 @@ func (lex *Lexical) alphabeticalCharacter() string {
 		lex.Token = TMonodrone
 	case Omnidrone:
 		lex.Token = TOmnidrone
+	// Built-in functions
+	case Send:
+		lex.Token = TSend
+	case Receive:
+		lex.Token = TReceive
 	default:
 		lex.Token = TId
 	}
