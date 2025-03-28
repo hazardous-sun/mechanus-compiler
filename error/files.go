@@ -5,7 +5,8 @@ const (
 	UninitializedFile = "uninitialized file"
 	EmptyFile         = "empty file"
 
-	FileCreateError = "unable to create file"
+	FileCreateSuccess = "successfully created file"
+	FileCreateError   = "unable to create file"
 
 	FileOpenSuccess = "successfully opened file"
 	FileOpenError   = "unable to open file"
