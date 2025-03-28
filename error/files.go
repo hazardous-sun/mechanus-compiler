@@ -3,6 +3,7 @@ package custom_errors
 const (
 	InvalidFIleName   = "invalid file name"
 	UninitializedFile = "uninitialized file"
+	EmptyFile         = "empty file"
 
 	FileCreateError = "unable to create file"
 
