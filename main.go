@@ -37,11 +37,18 @@ func main() {
 		return
 	}
 
-	lex.MovelookAhead()
+	err = lex.MovelookAhead()
+
+	if err != nil {
+		return
+	}
 
 	for lex.Token != models.TInputEnd && lex.Token != models.TLexError {
-		lex.NextToken()
-		if lex.Token != models.TSingleLineComment || lex.CommentBlock == false {
+		err = lex.NextToken()
+		if err != nil {
+			break
+		}
+		if !comment(&lex) {
 			lex.DisplayToken()
 		}
 	}
@@ -54,6 +61,13 @@ func main() {
 		err = lex.WriteOutput()
 	}
 
-	lex.ShowTokens()
+	//lex.ShowTokens()
 	return
+}
+
+func comment(lex *models.Lexical) bool {
+	return lex.Token == models.TSingleLineComment ||
+		lex.Token == models.TOpenMultilineComment ||
+		lex.Token == models.TCloseMultilineComment ||
+		lex.CommentBlock == true
 }
