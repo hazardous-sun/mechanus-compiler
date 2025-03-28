@@ -4,6 +4,8 @@ const (
 	InvalidFIleName   = "invalid file name"
 	UninitializedFile = "uninitialized file"
 
+	FileCreateError = "unable to create file"
+
 	FileOpenSuccess = "successfully opened file"
 	FileOpenError   = "unable to open file"
 
