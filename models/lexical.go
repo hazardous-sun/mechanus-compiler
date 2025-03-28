@@ -371,6 +371,8 @@ func (lex *Lexical) skipComment() error {
 func (lex *Lexical) multilineCommentEnd() bool {
 	// Checks that pointing to lex.Pointer+1 won't raise an index out of bound exception
 	// AND
+	// Checks if lex.LookAhead == '*'
+	// AND
 	// Checks if the current char + the next char == CloseMultilineComment
 	if lex.Pointer+1 <= len(lex.InputLine) && lex.LookAhead == '*' {
 		temp := fmt.Sprintf("%c%c", lex.LookAhead, lex.InputLine[lex.Pointer])
@@ -504,12 +506,27 @@ func (lex *Lexical) numericalCharacter() error {
 		return err
 	}
 
-	for lex.LookAhead >= '0' && lex.LookAhead <= '9' {
+	floatSeparatorFound := false
+
+	for (lex.LookAhead >= '0' && lex.LookAhead <= '9') || (lex.LookAhead >= '.' && !floatSeparatorFound) {
+		if lex.LookAhead == '.' {
+			floatSeparatorFound = true
+		}
 		sbLexeme.WriteRune(lex.LookAhead)
 		err = lex.MovelookAhead()
+		if err != nil {
+			return err
+		}
 	}
+
 	lex.Lexeme = sbLexeme.String()
-	lex.Token = TGear
+
+	if !floatSeparatorFound {
+		lex.Token = TGear
+	} else {
+		lex.Token = TTensor
+	}
+
 	return err
 }
 
@@ -631,7 +648,7 @@ func (lex *Lexical) quoteCharacters() error {
 		return err
 	}
 
-	for lex.LookAhead != '"' {
+	for lex.LookAhead != char {
 		sbLexeme.WriteRune(lex.LookAhead)
 		err = lex.MovelookAhead()
 
