@@ -16,23 +16,22 @@
         result: Gear := manualMultiplication(varInteger1, varInteger2)
 
         {
-            count := 0
-            Send(varString1 + "\n")
             {
+                count = count + 1
                 {
                     Send("what?")
                     detach
                 } if 20 < 30
-                }}
                 Send("All hail Mechanus!\n")
             } for count <= 100
+            count := 0
         } else {
-            Send("varBoolean2 == Active\n")
-            // Lets read from the standard input into a new var
-            varString2: Omnidrone = ""
-            Receive(varString2)
-            // Then print the value read
             Send(varString2)
+            // Then print the value read
+            Receive(varString2)
+            varString2: Omnidrone = ""
+            // Lets read from the standard input into a new var
+            Send("varBoolean2 == Active\n")
         } elif varBoolean2 {
             Send("varBoolean1 == Inactive\n")
         } if !varBoolean1
