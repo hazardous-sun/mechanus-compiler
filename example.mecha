@@ -8,7 +8,7 @@
         } for count < n2
 
         count: Gear = 0
-    } Gear (n1, n2: Gear)manualMultiplication Architect
+    } Gear manualMultiplication(n1, n2: Gear) Architect
 
     {
         Integrate 0
@@ -51,6 +51,6 @@
         varNil: Nil := nil
         // First we shall demonstrate how to allocate variables
 
-    } ()main Architect
+    } main() Architect
 
 } Construct main
