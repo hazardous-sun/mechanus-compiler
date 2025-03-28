@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	customerrors "mechanus-compiler/error"
 	"mechanus-compiler/models"
 	"os"
@@ -55,9 +54,9 @@ func main() {
 
 	if lex.Token == models.TLexError {
 		err = errors.New(lex.ErrorMessage)
-		customerrors.Log(fmt.Sprintf("Lexical error: %s", lex.ErrorMessage), &err, customerrors.ErrorLevel)
+		customerrors.Log(customerrors.LexicalError, &err, customerrors.ErrorLevel)
 	} else {
-		fmt.Println("Lexical analysis completed with no errors")
+		customerrors.Log(customerrors.LexicalSuccess, nil, customerrors.SuccessLevel)
 		err = lex.WriteOutput()
 	}
 
