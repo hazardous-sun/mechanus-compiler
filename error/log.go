@@ -6,13 +6,6 @@ import (
 )
 
 const (
-	FileOpenSuccess  = "successfully opened file"
-	FileCloseSuccess = "successfully closed the file"
-	FileOpenError    = "unable to open file"
-	FileCloseError   = "unable to close file"
-)
-
-const (
 	InfoLevel    = "info"
 	WarningLevel = "warning"
 	ErrorLevel   = "error"
