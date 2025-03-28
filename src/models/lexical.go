@@ -3,7 +3,7 @@ package models
 import (
 	"bufio"
 	"fmt"
-	custom_errors "mechanus-compiler/error"
+	custom_errors2 "mechanus-compiler/src/error"
 	"os"
 	"strings"
 )
@@ -327,8 +327,8 @@ func (lex *Lexical) nextLine() error {
 		lex.Pointer = len(lex.InputLine) - 1
 		return nil
 	} else {
-		custom_errors.Log(custom_errors.EndOfFileReached, nil, custom_errors.InfoLevel)
-		return fmt.Errorf(custom_errors.EndOfFileReached)
+		custom_errors2.Log(custom_errors2.EndOfFileReached, nil, custom_errors2.InfoLevel)
+		return fmt.Errorf(custom_errors2.EndOfFileReached)
 	}
 }
 
@@ -712,7 +712,7 @@ func (lex *Lexical) quoteCharacters() error {
 
 	for lex.LookAhead != char {
 		if char == '\'' && charCount > 1 {
-			return fmt.Errorf(custom_errors.InvalidMonodrone)
+			return fmt.Errorf(custom_errors2.InvalidMonodrone)
 		}
 		sbLexeme.WriteRune(lex.LookAhead)
 		err = lex.MoveLookAhead()
@@ -918,24 +918,24 @@ func (lex *Lexical) displayFunctions() string {
 // Close :
 // Closes the specified file (either input or output).
 func (lex *Lexical) Close(file string) {
-	custom_errors.Log(fmt.Sprintf("closing %s file", file), nil, custom_errors.InfoLevel)
+	custom_errors2.Log(fmt.Sprintf("closing %s file", file), nil, custom_errors2.InfoLevel)
 
 	switch file {
 	case "input":
 		err := lex.InputFile.Close()
 		if err != nil {
-			custom_errors.Log(custom_errors.FileCloseError, &err, custom_errors.ErrorLevel)
+			custom_errors2.Log(custom_errors2.FileCloseError, &err, custom_errors2.ErrorLevel)
 			return
 		}
 	case "output":
 		err := lex.OutputFile.Close()
 		if err != nil {
-			custom_errors.Log(custom_errors.FileCloseError, &err, custom_errors.ErrorLevel)
+			custom_errors2.Log(custom_errors2.FileCloseError, &err, custom_errors2.ErrorLevel)
 			return
 		}
 	}
 
-	custom_errors.Log(custom_errors.FileCloseSuccess, nil, custom_errors.SuccessLevel)
+	custom_errors2.Log(custom_errors2.FileCloseSuccess, nil, custom_errors2.SuccessLevel)
 }
 
 // WriteOutput :
@@ -943,7 +943,7 @@ func (lex *Lexical) Close(file string) {
 func (lex *Lexical) WriteOutput() error {
 	if lex.OutputFile == nil {
 
-		return fmt.Errorf(custom_errors.UninitializedFile)
+		return fmt.Errorf(custom_errors2.UninitializedFile)
 	}
 	file, err := os.Create("output.txt")
 	if err != nil {
@@ -956,14 +956,14 @@ func (lex *Lexical) WriteOutput() error {
 		return err
 	}
 
-	custom_errors.Log(custom_errors.FileCreateSuccess, nil, custom_errors.SuccessLevel)
+	custom_errors2.Log(custom_errors2.FileCreateSuccess, nil, custom_errors2.SuccessLevel)
 	return nil
 }
 
 // ShowTokens :
 // Displays the list of identified tokens.
 func (lex *Lexical) ShowTokens() {
-	custom_errors.Log(custom_errors.IdentifiedTokens, nil, custom_errors.SuccessLevel)
+	custom_errors2.Log(custom_errors2.IdentifiedTokens, nil, custom_errors2.SuccessLevel)
 	fmt.Println(lex.IdentifiedTokens.String())
 }
 

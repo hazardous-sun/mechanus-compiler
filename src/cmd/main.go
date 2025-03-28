@@ -2,8 +2,8 @@ package main
 
 import (
 	"errors"
-	customerrors "mechanus-compiler/error"
-	"mechanus-compiler/models"
+	"mechanus-compiler/src/error"
+	"mechanus-compiler/src/models"
 	"os"
 )
 
@@ -14,10 +14,10 @@ import (
 func main() {
 	// Initialize input and output files insde Lexical
 	lex := models.NewLexical(nil, nil)
-	inputFile, err := os.Open("example.mecha")
+	inputFile, err := os.Open("examples/example1.mecha")
 
 	if err != nil {
-		customerrors.Log(customerrors.FileOpenError, &err, customerrors.ErrorLevel)
+		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
 		return
 	}
 	lex.InputFile = inputFile
@@ -26,7 +26,7 @@ func main() {
 	outputFile, err := os.Create("output.txt")
 
 	if err != nil {
-		customerrors.Log(customerrors.FileCreateError, &err, customerrors.ErrorLevel)
+		custom_errors.Log(custom_errors.FileCreateError, &err, custom_errors.ErrorLevel)
 		return
 	}
 	lex.OutputFile = outputFile
@@ -36,7 +36,7 @@ func main() {
 	err = lex.ReadLines()
 
 	if err != nil {
-		customerrors.Log(customerrors.EmptyFile, &err, customerrors.ErrorLevel)
+		custom_errors.Log(custom_errors.EmptyFile, &err, custom_errors.ErrorLevel)
 		return
 	}
 
@@ -60,9 +60,9 @@ func main() {
 
 	if lex.Token == models.TLexError {
 		err = errors.New(lex.ErrorMessage)
-		customerrors.Log(customerrors.LexicalError, &err, customerrors.ErrorLevel)
+		custom_errors.Log(custom_errors.LexicalError, &err, custom_errors.ErrorLevel)
 	} else {
-		customerrors.Log(customerrors.LexicalSuccess, nil, customerrors.SuccessLevel)
+		custom_errors.Log(custom_errors.LexicalSuccess, nil, custom_errors.SuccessLevel)
 		err = lex.WriteOutput()
 	}
 
