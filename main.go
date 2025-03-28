@@ -7,6 +7,10 @@ import (
 	"os"
 )
 
+// TODO check for Active and Inative values for State variables
+// TODO check why Send function is not being correctly shown
+// TODO check why the Construct name is not being collected
+
 func main() {
 	// Initialize input and output files insde Lexical
 	lex := models.NewLexical(nil, nil)
