@@ -8,7 +8,7 @@ import (
 
 func main() {
 	// Open source file
-	sourceFile, err := os.Open("examples/example1.mecha")
+	sourceFile, err := os.Open("docs/examples/example1.mecha")
 
 	if err != nil {
 		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
