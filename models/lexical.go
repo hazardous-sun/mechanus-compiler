@@ -834,7 +834,8 @@ func (lex *Lexical) WriteOutput() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Arquivo Salvo: output.txt")
+
+	custom_errors.Log(custom_errors.FileCreateSuccess, nil, custom_errors.SuccessLevel)
 	return nil
 }
 
