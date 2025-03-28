@@ -283,7 +283,10 @@ func (lex *Lexical) ReadLines() error {
 	err := scanner.Err()
 
 	if err == nil {
-		lex.InputLine = lex.Lines[0]
+		lex.CurrentLine = len(lex.Lines) - 1
+		lex.InputLine = lex.Lines[lex.CurrentLine]
+		lex.CurrentColumn = len(lex.InputLine)
+		lex.Pointer = lex.CurrentColumn - 1
 		lex.LookAhead = rune(lex.InputLine[lex.Pointer])
 	}
 
@@ -295,7 +298,7 @@ func (lex *Lexical) ReadLines() error {
 // line.
 func (lex *Lexical) MoveLookAhead() error {
 	// end of line reached
-	if lex.Pointer+1 > len(lex.InputLine) {
+	if lex.Pointer-1 < 0 {
 		err := lex.nextLine()
 
 		if err != nil {
@@ -313,19 +316,16 @@ func (lex *Lexical) MoveLookAhead() error {
 	} else {
 		lex.LookAhead = rune(lex.InputLine[lex.Pointer])
 	}
-	if lex.LookAhead >= 'a' && lex.LookAhead <= 'z' {
-		lex.LookAhead = lex.LookAhead - 'a' + 'A'
-	}
-	lex.Pointer++
+	lex.Pointer--
 	lex.CurrentColumn = lex.Pointer + 1
 	return nil
 }
 
 func (lex *Lexical) nextLine() error {
-	lex.CurrentLine++
-	lex.Pointer = 0
-	if lex.CurrentLine < len(lex.Lines) {
+	lex.CurrentLine--
+	if lex.CurrentLine > 0 {
 		lex.InputLine = lex.Lines[lex.CurrentLine]
+		lex.Pointer = len(lex.InputLine) - 1
 		return nil
 	} else {
 		custom_errors.Log(custom_errors.EndOfFileReached, nil, custom_errors.InfoLevel)
@@ -472,7 +472,7 @@ func (lex *Lexical) alphabeticalCharacter() error {
 		return err
 	}
 
-	for (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= '0' && lex.LookAhead <= '9') || lex.LookAhead == '_' {
+	for (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= 'a' && lex.LookAhead <= 'z') || (lex.LookAhead >= '0' && lex.LookAhead <= '9') || lex.LookAhead == '_' {
 		sbLexeme.WriteRune(lex.LookAhead)
 		err = lex.MoveLookAhead()
 		if err != nil {
@@ -482,7 +482,7 @@ func (lex *Lexical) alphabeticalCharacter() error {
 
 	lex.Lexeme = sbLexeme.String()
 
-	switch lex.Lexeme {
+	switch reverse(strings.ToUpper(lex.Lexeme)) {
 	// Construction tokens
 	case Construct:
 		lex.Token = TConstruct
@@ -610,13 +610,14 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 		lex.Token = TDeclarationOperator
 	default:
 		lex.uniqueSymbolCharacter(temp)
+		uniqueSymbol = true
 	}
 
 	if err != nil {
 		return err
 	}
 
-	if !uniqueSymbol {
+	if uniqueSymbol {
 		lex.Lexeme = sbLexeme.String()
 	}
 
@@ -748,6 +749,7 @@ func (lex *Lexical) quoteCharacters() error {
 // Displays the current token and lexeme to the output.
 func (lex *Lexical) DisplayToken() {
 	var tokenLexeme string
+	lex.Lexeme = reverse(lex.Lexeme)
 
 	if lex.Token >= TConstruct && lex.Token < TIf {
 		tokenLexeme = lex.displayConstructionToken()
@@ -766,6 +768,19 @@ func (lex *Lexical) DisplayToken() {
 	fmt.Println(tokenLexeme + " ( " + lex.Lexeme + " )")
 	lex.storeTokens(tokenLexeme + " ( " + lex.Lexeme + " )")
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+// Reverses a string. Used to output the correct lexeme
+func reverse(s string) string {
+	runes := []rune(s)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	return string(runes)
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (lex *Lexical) displayConstructionToken() string {
 	switch lex.Token {
