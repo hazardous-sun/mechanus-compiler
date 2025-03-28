@@ -253,6 +253,9 @@ type Lexical struct {
 	CommentBlock     bool
 }
 
+// NewLexical :
+// Initializes a new Lexical instance with the provided input and output files. It also sets up various initial values
+// for the lexer.
 func NewLexical(inputFile, outputFile *os.File) Lexical {
 	lex := Lexical{
 		InputFile:     inputFile,
@@ -268,6 +271,8 @@ func NewLexical(inputFile, outputFile *os.File) Lexical {
 	return lex
 }
 
+// ReadLines :
+// Reads all lines from source file and stores them inside lex.Lines
 func (lex *Lexical) ReadLines() error {
 	scanner := bufio.NewScanner(lex.InputFile)
 
@@ -285,7 +290,10 @@ func (lex *Lexical) ReadLines() error {
 	return err
 }
 
-func (lex *Lexical) MovelookAhead() error {
+// MoveLookAhead :
+// Moves the pointer to the next character in the current line. If the end of the line is reached, it loads the next
+// line.
+func (lex *Lexical) MoveLookAhead() error {
 	// end of line reached
 	if lex.Pointer+1 > len(lex.InputLine) {
 		err := lex.nextLine()
@@ -297,7 +305,7 @@ func (lex *Lexical) MovelookAhead() error {
 		if len(lex.InputLine) > 1 {
 			lex.LookAhead = rune(lex.InputLine[lex.Pointer])
 		} else {
-			err := lex.MovelookAhead()
+			err := lex.MoveLookAhead()
 			if err != nil {
 				return err
 			}
@@ -325,6 +333,9 @@ func (lex *Lexical) nextLine() error {
 	}
 }
 
+// NextToken :
+// Advances the lexer to the next token, checking for separators, alphabetical characters, numerical characters, string
+// literals, or symbols.
 func (lex *Lexical) NextToken() error {
 	var err error
 	// Check if lex.LookAhead is inside a comment block
@@ -332,7 +343,7 @@ func (lex *Lexical) NextToken() error {
 		err = lex.skipComment()
 	} else {
 		for lex.isSeparatorCharacter() {
-			err = lex.MovelookAhead()
+			err = lex.MoveLookAhead()
 			if err != nil {
 				return err
 			}
@@ -347,7 +358,7 @@ func (lex *Lexical) NextToken() error {
 		err = lex.alphabeticalCharacter()
 	} else if lex.isNumericalCharacter() {
 		err = lex.numericalCharacter()
-	} else if lex.isString() {
+	} else if lex.isQuotation() {
 		err = lex.quoteCharacters()
 	} else {
 		err = lex.symbolCharacter()
@@ -355,9 +366,10 @@ func (lex *Lexical) NextToken() error {
 	return err
 }
 
+// Handles symbols like operators, delimiters, and comments.
 func (lex *Lexical) symbolCharacter() error {
 	temp := lex.LookAhead
-	err := lex.MovelookAhead()
+	err := lex.MoveLookAhead()
 	if err != nil {
 		return err
 	}
@@ -368,9 +380,10 @@ func (lex *Lexical) symbolCharacter() error {
 	return nil
 }
 
+// Skips over a comment block until the end of the comment is reached.
 func (lex *Lexical) skipComment() error {
 	for !lex.multilineCommentEnd() {
-		err := lex.MovelookAhead()
+		err := lex.MoveLookAhead()
 		if err != nil {
 			return err
 		}
@@ -378,6 +391,7 @@ func (lex *Lexical) skipComment() error {
 	return nil
 }
 
+// Checks if the current position marks the end of a multiline comment.
 func (lex *Lexical) multilineCommentEnd() bool {
 	// Checks that pointing to lex.Pointer+1 won't raise an index out of bound exception
 	// AND
@@ -395,30 +409,33 @@ func (lex *Lexical) multilineCommentEnd() bool {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+// Checks if the current character is a separator (e.g., space, tab, newline).
 func (lex *Lexical) isSeparatorCharacter() bool {
 	return lex.LookAhead == ' ' || lex.LookAhead == '\t' || lex.LookAhead == '\n' || lex.LookAhead == '\r'
 }
 
+// Checks if the current character is an alphabetical letter (A-Z or a-z).
 func (lex *Lexical) isAlphabeticalCharacter() bool {
 	return (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= 'a' && lex.LookAhead <= 'z')
 }
 
+// Checks if the current character is a numerical digit (0-9).
 func (lex *Lexical) isNumericalCharacter() bool {
 	return lex.LookAhead >= '0' && lex.LookAhead <= '9'
 }
 
-func (lex *Lexical) isString() bool {
+// Checks if the current character is a quote (single or double).
+func (lex *Lexical) isQuotation() bool {
 	return lex.LookAhead == SingleQuote || lex.LookAhead == DoubleQuote
 }
 
+// Checks if the current character could be part of a multi-character symbol like an operator.
 func (lex *Lexical) isMultiCharacterSymbol() bool {
 	if matchesSingleCharSymbols(lex.LookAhead) {
 		return false
 	}
 	return (lex.Pointer+1) < len(lex.InputLine) && (lex.InputLine[lex.Pointer+1] >= '&' && lex.InputLine[lex.Pointer+1] <= '/')
 }
-
-// ---------------------------------------------------------------------------------------------------------------------
 
 func matchesSingleCharSymbols(lookAhead rune) bool {
 	switch lookAhead {
@@ -443,10 +460,13 @@ func matchesSingleCharSymbols(lookAhead rune) bool {
 	}
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
+// Processes alphabetical characters to form identifiers or keywords.
 func (lex *Lexical) alphabeticalCharacter() error {
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.LookAhead)
-	err := lex.MovelookAhead()
+	err := lex.MoveLookAhead()
 
 	if err != nil {
 		return err
@@ -454,7 +474,7 @@ func (lex *Lexical) alphabeticalCharacter() error {
 
 	for (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= '0' && lex.LookAhead <= '9') || lex.LookAhead == '_' {
 		sbLexeme.WriteRune(lex.LookAhead)
-		err = lex.MovelookAhead()
+		err = lex.MoveLookAhead()
 		if err != nil {
 			return err
 		}
@@ -506,11 +526,12 @@ func (lex *Lexical) alphabeticalCharacter() error {
 	return nil
 }
 
+// Processes numerical characters and determines the type (Gear or Tensor).
 func (lex *Lexical) numericalCharacter() error {
 	var err error
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.LookAhead)
-	err = lex.MovelookAhead()
+	err = lex.MoveLookAhead()
 
 	if err != nil {
 		return err
@@ -523,7 +544,7 @@ func (lex *Lexical) numericalCharacter() error {
 			floatSeparatorFound = true
 		}
 		sbLexeme.WriteRune(lex.LookAhead)
-		err = lex.MovelookAhead()
+		err = lex.MoveLookAhead()
 		if err != nil {
 			return err
 		}
@@ -540,6 +561,7 @@ func (lex *Lexical) numericalCharacter() error {
 	return err
 }
 
+// Handles multi-character symbols like operators and comments.
 func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 	var err error
 	sbLexeme := strings.Builder{}
@@ -549,7 +571,7 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 
 	if checkMultiSymbolMatch(temp, lex.LookAhead) {
 		sbLexeme.WriteRune(lex.LookAhead)
-		err = lex.MovelookAhead()
+		err = lex.MoveLookAhead()
 
 		if err != nil {
 			return err
@@ -632,6 +654,7 @@ func checkMultiSymbolMatch(char1, char2 rune) bool {
 	}
 }
 
+// Processes single-character symbols and maps them to their respective token types.
 func (lex *Lexical) uniqueSymbolCharacter(temp rune) {
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(temp)
@@ -677,6 +700,7 @@ func (lex *Lexical) uniqueSymbolCharacter(temp rune) {
 	lex.Lexeme = sbLexeme.String()
 }
 
+// Handles string literals, either single or double-quoted.
 func (lex *Lexical) quoteCharacters() error {
 	var err error
 	charCount := 0
@@ -686,7 +710,7 @@ func (lex *Lexical) quoteCharacters() error {
 	}
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.LookAhead)
-	err = lex.MovelookAhead()
+	err = lex.MoveLookAhead()
 
 	if err != nil {
 		return err
@@ -697,7 +721,7 @@ func (lex *Lexical) quoteCharacters() error {
 			return fmt.Errorf(custom_errors.InvalidMonodrone)
 		}
 		sbLexeme.WriteRune(lex.LookAhead)
-		err = lex.MovelookAhead()
+		err = lex.MoveLookAhead()
 
 		if err != nil {
 			return err
@@ -707,7 +731,7 @@ func (lex *Lexical) quoteCharacters() error {
 	}
 
 	sbLexeme.WriteRune(lex.LookAhead)
-	err = lex.MovelookAhead()
+	err = lex.MoveLookAhead()
 	lex.Lexeme = sbLexeme.String()
 	switch char {
 	case DoubleQuote:
@@ -720,6 +744,8 @@ func (lex *Lexical) quoteCharacters() error {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+// DisplayToken :
+// Displays the current token and lexeme to the output.
 func (lex *Lexical) DisplayToken() {
 	var tokenLexeme string
 
@@ -881,6 +907,8 @@ func (lex *Lexical) displayFunctions() string {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+// Close :
+// Closes the specified file (either input or output).
 func (lex *Lexical) Close(file string) {
 	custom_errors.Log(fmt.Sprintf("closing %s file", file), nil, custom_errors.InfoLevel)
 
@@ -902,6 +930,8 @@ func (lex *Lexical) Close(file string) {
 	custom_errors.Log(custom_errors.FileCloseSuccess, nil, custom_errors.SuccessLevel)
 }
 
+// WriteOutput :
+// Writes the identified tokens to the output file.
 func (lex *Lexical) WriteOutput() error {
 	if lex.OutputFile == nil {
 
@@ -922,11 +952,14 @@ func (lex *Lexical) WriteOutput() error {
 	return nil
 }
 
+// ShowTokens :
+// Displays the list of identified tokens.
 func (lex *Lexical) ShowTokens() {
 	custom_errors.Log(custom_errors.IdentifiedTokens, nil, custom_errors.SuccessLevel)
 	fmt.Println(lex.IdentifiedTokens.String())
 }
 
+// Stores an identified token into the IdentifiedTokens builder.
 func (lex *Lexical) storeTokens(identifiedToken string) {
 	lex.IdentifiedTokens.WriteString(identifiedToken)
 	lex.IdentifiedTokens.WriteString("\n")
