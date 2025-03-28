@@ -236,7 +236,9 @@ const (
 	OutputReceive = "T_RECEIVE"
 )
 
-// Lexical struct to hold Lexical analyzer state
+// Lexical :
+// This is the structure responsible for making the lexical analysis of the source file. It checks for unrecognized
+// lexemes and, if it finds one, it returns an error code.
 type Lexical struct {
 	InputFile        *os.File
 	Lines            []string
