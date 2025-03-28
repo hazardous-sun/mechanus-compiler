@@ -12,19 +12,19 @@ import (
 const (
 	//	 Construction tokens
 
-	TConstruct      = 1
-	TDefineFunction = 2
-	TReturn         = 3
-	TComma          = 4
-	TColom          = 5
+	TConstruct = 1
+	TArchitect = 2
+	TIntegrate = 3
+	TComma     = 4
+	TColon     = 5
 
 	//	 Conditional and repetition tokens
 
-	TIf    = 101
-	TElse  = 102
-	TElif  = 103
-	TFor   = 104
-	TBreak = 105
+	TIf     = 101
+	TElse   = 102
+	TElif   = 103
+	TFor    = 104
+	TDetach = 105
 
 	//	 Structure tokens
 
@@ -54,14 +54,17 @@ const (
 	TOrOperator             = 314
 	TNotOperator            = 315
 	TDeclarationOperator    = 316
-	TAttributioOperator     = 317
+	TAttributionOperator    = 317
 
 	//	 Type tokens
 
-	TInteger = 401
-	TFLoat   = 402
-	TNil     = 404
-	TId      = 405
+	TNil       = 401
+	TGear      = 402
+	TTensor    = 403
+	TState     = 404
+	TMonodrone = 405
+	TOmnidrone = 406
+	TId        = 407
 
 	//	 Control tokens
 
@@ -74,56 +77,142 @@ const (
 const (
 	//	 Construction tokens
 
-	Construct      = "Construct"
-	DefineFunction = "Architect"
-	Return         = "Integrate"
-	Comma          = ","
-	Colom          = ":"
+	Construct = "CONSTRUCT"
+	Architect = "ARCHITECT"
+	Integrate = "INTEGRATE"
 
 	//	 Conditional and repetition tokens
 
-	If    = "if"
-	Else  = "else"
-	Elif  = "elif"
-	For   = "for"
-	Break = "detach"
+	If     = "IF"
+	Else   = "ELSE"
+	Elif   = "ELIF"
+	For    = "FOR"
+	Detach = "DETACH"
+
+	//	 Type tokens
+
+	Nil       = "NIL"
+	Gear      = "GEAR"
+	Tensor    = "TENSOR"
+	State     = "STATE"
+	Monodrone = "MONODRONE"
+	Omnidrone = "OMNIDRONE"
+	Id        = "ID"
+)
+
+// Constants for unique-symbol tokens
+const (
+	// Construction tokens
+
+	Comma = ','
+	Colon = ':'
 
 	//	 Structure tokens
 
-	OpenParentheses       = "("
-	CloseParentheses      = ")"
-	OpenBraces            = "{"
-	CloseBraces           = "}"
+	OpenParentheses  = '('
+	CloseParentheses = ')'
+	OpenBraces       = '{'
+	CloseBraces      = '}'
+
+	//	 Operators
+
+	GreaterThanOperator    = '>'
+	LessThanOperator       = '<'
+	AdditionOperator       = '+'
+	SubtractionOperator    = '-'
+	MultiplicationOperator = '*'
+	DivisionOperator       = '/'
+	ModuleOperator         = '%'
+	NotOperator            = '!'
+	AttributionOperator    = '='
+)
+
+// Constants for multi-symbol tokens
+const (
+	// Structure tokens
+
 	SingleLineComment     = "//"
 	OpenMultilineComment  = "/*"
 	CloseMultilineComment = "*/"
 
-	//	 Operators
+	// Operators
 
-	GreaterThan            = ">"
-	LessThanOperator       = "<"
-	GreaterEqualOperator   = ">="
-	LessEqualOperator      = "<="
-	EqualOperator          = "=="
-	NotEqualOperator       = "!="
-	AdditionOperator       = "+"
-	SubtractionOperator    = "-"
-	MultiplicationOperator = "*"
-	DivisionOperator       = "/"
-	ModuleOperator         = "%"
-	ExponentiationOperator = "**"
-	AndOperator            = "&&"
-	OrOperator             = "||"
-	NotOperator            = "!"
-	DeclarationOperator    = ":="
-	AttributioOperator     = "="
+	GreaterEqualOperator = ">="
+	LessEqualOperator    = "<="
+	EqualOperator        = "=="
+	NotEqualOperator     = "!="
+	AndOperator          = "&&"
+	OrOperator           = "||"
+	DeclarationOperator  = ":="
+)
 
-	//	 Type tokens
+// Constants for output
+const (
+	//   Construction tokens
 
-	Integer = "Gear"
-	FLoat   = "Tensor"
-	Nil     = "Nil"
-	Id      = "Id"
+	OutputConstruct = "T_CONSTRUCT"
+	OutputArchitect = "T_ARCHITECT"
+	OutputIntegrate = "T_INTEGRATE"
+	OutputComma     = "T_COMMA"
+	OutputColon     = "T_COLON"
+
+	//   Conditional and repetition tokens
+
+	OutputIf     = "T_IF"
+	OutputElse   = "T_ELSE"
+	OutputElif   = "T_ELIF"
+	OutputFor    = "T_FOR"
+	OutputDetach = "T_DETACH"
+
+	//   Type tokens
+
+	OutputNil       = "T_NIL"
+	OutputGear      = "T_GEAR"
+	OutputTensor    = "T_TENSOR"
+	OutputState     = "T_STATE"
+	OutputMonodrone = "T_MONODRONE"
+	OutputOmnidrone = "T_OMNIDRONE"
+	OutputId        = "T_ID"
+
+	//   Structure tokens
+
+	OutputOpenParentheses       = "T_OPEN_PARENTHESES"
+	OutputCloseParentheses      = "T_CLOSE_PARENTHESES"
+	OutputOpenBraces            = "T_OPEN_BRACES"
+	OutputCloseBraces           = "T_CLOSE_BRACES"
+	OutputSingleLineComment     = "T_SINGLE_LINE_COMMENT"
+	OutputOpenMultilineComment  = "T_OPEN_MULTILINE_COMMENT"
+	OutputCloseMultilineComment = "T_CLOSE_MULTILINE_COMMENT"
+
+	//   Operators
+
+	// --- Comparison operators
+
+	OutputGreaterThanOperator  = "T_GREATER_THAN_OPERATOR"
+	OutputGreaterEqualOperator = "T_GREATER_EQUAL_OPERATOR"
+	OutputLessThanOperator     = "T_LESS_THAN_OPERATOR"
+	OutputLessEqualOperator    = "T_LESS_EQUAL_OPERATOR"
+	OutputEqualOperator        = "T_EQUAL_OPERATOR"
+	OutputNotEqualOperator     = "T_NOT_EQUAL_OPERATOR"
+
+	// --- Math operators
+
+	OutputAdditionOperator       = "T_ADDITION_OPERATOR"
+	OutputSubtractionOperator    = "T_SUBTRACTION_OPERATOR"
+	OutputMultiplicationOperator = "T_MULTIPLICATION_OPERATOR"
+	OutputDivisionOperator       = "T_DIVISION_OPERATOR"
+	OutputModuleOperator         = "T_MODULE_OPERATOR"
+
+	// --- Logical operators
+
+	OutputNotOperator = "T_NOT_OPERATOR"
+	OutputAndOperator = "T_AND_OPERATOR"
+	OutputOrOperator  = "T_OR_OPERATOR"
+
+	// --- Value operators
+
+	OutputDeclarationOperator = "T_DECLARATION_OPERATOR"
+	OutputAttributionOperator = "T_ATTRIBUTION_OPERATOR"
 )
 
 // Lexical struct to hold Lexical analyzer state
@@ -156,14 +245,14 @@ func NewLexical(inputFile, outputFile *os.File) Lexical {
 	return lex
 }
 
-func (lex *Lexical) movelookAhead() error {
+func (lex *Lexical) MovelookAhead() {
 	if lex.Pointer+1 > len(lex.InputLine) {
 		lex.CurrentLine++
 		lex.Pointer = 0
 		line, err := lex.RdInput.ReadString('\n')
 		if err != nil {
-			lex.LookAhead = EOF
-			return err
+			lex.LookAhead = TInputEnd
+			return
 		}
 		lex.InputLine = line
 		lex.LookAhead = rune(lex.InputLine[lex.Pointer])
@@ -175,14 +264,14 @@ func (lex *Lexical) movelookAhead() error {
 	}
 	lex.Pointer++
 	lex.CurrentColumn = lex.Pointer + 1
-	return nil
+	return
 }
 
-func (lex *Lexical) nextToken() error {
+func (lex *Lexical) NextToken() {
 	var sbLexeme strings.Builder
 
 	for lex.LookAhead == ' ' || lex.LookAhead == '\t' || lex.LookAhead == '\n' || lex.LookAhead == '\r' {
-		lex.movelookAhead()
+		lex.MovelookAhead()
 	}
 
 	if lex.LookAhead >= 'A' && lex.LookAhead <= 'Z' {
@@ -190,41 +279,57 @@ func (lex *Lexical) nextToken() error {
 	} else if lex.LookAhead >= '0' && lex.LookAhead <= '9' {
 		lex.numericalCharacter(sbLexeme)
 	} else {
-		lex.symbolCharacter(sbLexeme)
+		lex.uniqueSymbolCharacter(sbLexeme)
 	}
 
 	lex.Lexeme = sbLexeme.String()
-	return nil
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (lex *Lexical) alphabeticalCharacter(sbLexeme strings.Builder) {
 	sbLexeme.WriteRune(lex.LookAhead)
-	lex.movelookAhead()
+	lex.MovelookAhead()
 
 	for (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= '0' && lex.LookAhead <= '9') || lex.LookAhead == '_' {
 		sbLexeme.WriteRune(lex.LookAhead)
-		lex.movelookAhead()
+		lex.MovelookAhead()
 	}
 
 	lex.Lexeme = sbLexeme.String()
 
 	switch strings.ToUpper(lex.Lexeme) {
-	case "CONSTRUCT":
+	// Construction tokens
+	case Construct:
 		lex.Token = TConstruct
-	case "VARIABLES":
-		lex.Token = TVariable
-	case "IF":
+	case Architect:
+		lex.Token = TArchitect
+	case Integrate:
+		lex.Token = TIntegrate
+	// Conditional and repetition tokens
+	case If:
 		lex.Token = TIf
-	case "ELSE":
+	case Else:
 		lex.Token = TElse
-	case "ELSE_IF":
+	case Elif:
 		lex.Token = TElif
-	case "FOR":
+	case For:
 		lex.Token = TFor
-	case "BREAK":
-		lex.Token = TBreak
+	case Detach:
+		lex.Token = TDetach
+	case Nil:
+		lex.Token = TNil
+	// Types
+	case Gear:
+		lex.Token = TGear
+	case Tensor:
+		lex.Token = TTensor
+	case State:
+		lex.Token = TState
+	case Monodrone:
+		lex.Token = TMonodrone
+	case Omnidrone:
+		lex.Token = TOmnidrone
 	default:
 		lex.Token = TId
 	}
@@ -232,111 +337,185 @@ func (lex *Lexical) alphabeticalCharacter(sbLexeme strings.Builder) {
 
 func (lex *Lexical) numericalCharacter(sbLexeme strings.Builder) {
 	sbLexeme.WriteRune(lex.LookAhead)
-	lex.movelookAhead()
+	lex.MovelookAhead()
 	for lex.LookAhead >= '0' && lex.LookAhead <= '9' {
 		sbLexeme.WriteRune(lex.LookAhead)
-		lex.movelookAhead()
+		lex.MovelookAhead()
 	}
-	lex.Token = TInteger
+	lex.Token = TGear
 }
 
-func (lex *Lexical) symbolCharacter(sbLexeme strings.Builder) {
+func (lex *Lexical) uniqueSymbolCharacter(sbLexeme strings.Builder) {
 	switch lex.LookAhead {
-	case '(':
-		lex.Token = TOpenParentheses
-	case ')':
-		lex.Token = TCloseParentheses
-	case '{':
-		lex.Token = TOpenBraces
-	case '}':
-		lex.Token = TCloseBraces
-	case ',':
+	// Construction tokens
+	case Comma:
 		lex.Token = TComma
-	case '+':
-		lex.Token = TAdditionOperator
-	case '-':
-		lex.Token = TSubtractionOperator
-	case '*':
-		lex.Token = TMultiplicationOperator
-	case '/':
-		lex.Token = TDivisionOperator
-	case '%':
-		lex.Token = TModuleOperator
-	case '<':
-		lex.Token = TLessThanOperator
-	case '>':
+	case Colon:
+		lex.Token = TColon
+	// Structure tokens
+	case OpenParentheses:
+		lex.Token = TOpenParentheses
+	case CloseParentheses:
+		lex.Token = TCloseParentheses
+	case OpenBraces:
+		lex.Token = TOpenBraces
+	case CloseBraces:
+		lex.Token = TCloseBraces
+	// Operators
+	case GreaterThanOperator:
 		lex.Token = TGreaterThanOperator
-	case '=':
-		lex.Token = TEqualOperator
+	case LessThanOperator:
+		lex.Token = TLessThanOperator
+	case AdditionOperator:
+		lex.Token = TAdditionOperator
+	case SubtractionOperator:
+		lex.Token = TSubtractionOperator
+	case MultiplicationOperator:
+		lex.Token = TMultiplicationOperator
+	case DivisionOperator:
+		lex.Token = TDivisionOperator
+	case ModuleOperator:
+		lex.Token = TModuleOperator
+	case NotOperator:
+		lex.Token = TNotOperator
+	case AttributionOperator:
+		lex.Token = TAttributionOperator
 	default:
 		lex.Token = TLexError
-		lex.ErrorMessage = fmt.Sprintf("Erro Léxico na linha: %d\nReconhecido ao atingir a coluna: %d\nLinha do Erro: <%s>\nToken desconhecido: %c", lex.CurrentLine, lex.CurrentColumn, lex.InputLine, lex.LookAhead)
+		lex.ErrorMessage = fmt.Sprintf("Lexical error on line: %d\nRecognized upon reaching column: %d\nError line: <%s>\nUnknown token: %c", lex.CurrentLine, lex.CurrentColumn, lex.InputLine, lex.LookAhead)
 	}
 	sbLexeme.WriteRune(lex.LookAhead)
-	lex.movelookAhead()
+	lex.MovelookAhead()
+}
+
+func (lex *Lexical) multiSymbolCharacter(sbLexeme strings.Builder) {
+	sbLexeme.WriteRune(lex.LookAhead)
+	lex.MovelookAhead()
+
+	for lex.LookAhead >= '&' && lex.LookAhead <= '/' {
+		sbLexeme.WriteRune(lex.LookAhead)
+		lex.MovelookAhead()
+	}
+
+	lex.Lexeme = sbLexeme.String()
+
+	switch lex.Lexeme {
+	// Construction tokens
+	case SingleLineComment:
+		lex.Token = TSingleLineComment
+	case OpenMultilineComment:
+		lex.Token = TOpenMultilineComment
+	case CloseMultilineComment:
+		lex.Token = TCloseMultilineComment
+	// Conditional and repetition tokens
+	case GreaterEqualOperator:
+		lex.Token = TGreaterEqualOperator
+	case LessEqualOperator:
+		lex.Token = TLessEqualOperator
+	case EqualOperator:
+		lex.Token = TEqualOperator
+	case NotEqualOperator:
+		lex.Token = TNotEqualOperator
+	case AndOperator:
+		lex.Token = TAndOperator
+	case OrOperator:
+		lex.Token = TOrOperator
+	case DeclarationOperator:
+		lex.Token = TDeclarationOperator
+	default:
+		lex.Token = TLexError
+		lex.ErrorMessage = fmt.Sprintf("Lexical error on line: %d\nRecognized upon reaching column: %d\nError line: <%s>\nUnknown token: %s", lex.CurrentLine, lex.CurrentColumn, lex.InputLine, lex.Lexeme)
+	}
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (lex *Lexical) displayToken() {
+func (lex *Lexical) DisplayToken() {
 	var tokenLexeme string
 	switch lex.Token {
+	// Construction tokens
 	case TConstruct:
-		tokenLexeme = "T_MODULE"
-	case TVariable:
-		tokenLexeme = "T_VARIABLE"
+		tokenLexeme = OutputConstruct
+	case TArchitect:
+		tokenLexeme = OutputArchitect
+	case TIntegrate:
+		tokenLexeme = OutputIntegrate
 	case TComma:
-		tokenLexeme = "T_COMMA"
+		tokenLexeme = OutputComma
+	case TColon:
+		tokenLexeme = OutputColon
+	// Conditional and repetition
 	case TIf:
-		tokenLexeme = "T_IF"
+		tokenLexeme = OutputIf
 	case TElse:
-		tokenLexeme = "T_ELSE"
+		tokenLexeme = OutputElse
 	case TElif:
-		tokenLexeme = "T_ELSE_IF"
+		tokenLexeme = OutputElif
 	case TFor:
-		tokenLexeme = "T_FOR"
-	case TBreak:
-		tokenLexeme = "T_BREAK"
-	case TOpenParentheses:
-		tokenLexeme = "T_OPEN_PARENTHESES"
-	case TCloseParentheses:
-		tokenLexeme = "T_CLOSE_PARENTHESES"
-	case TGreaterThanOperator:
-		tokenLexeme = "T_GREATER_THAN_OPERATOR"
-	case TLessThanOperator:
-		tokenLexeme = "T_LESS_THAN_OPERATOR"
-	case TGreaterEqualOperator:
-		tokenLexeme = "T_GREATER_EQUAL_OPERATOR"
-	case TLessEqualOperator:
-		tokenLexeme = "T_LESS_EQUAL_OPERATOR"
-	case TEqualOperator:
-		tokenLexeme = "T_EQUAL_OPERATOR"
-	case TNotEqualOperator:
-		tokenLexeme = "T_NOT_EQUAL_OPERATOR"
-	case TAdditionOperator:
-		tokenLexeme = "T_ADDITION_OPERATOR"
-	case TSubtractionOperator:
-		tokenLexeme = "T_SUBTRACTION_OPERATOR"
-	case TMultiplicationOperator:
-		tokenLexeme = "T_MULTIPLICATION_OPERATOR"
-	case TDivisionOperator:
-		tokenLexeme = "T_DIVISION_OPERATOR"
-	case TModuleOperator:
-		tokenLexeme = "T_MODULE_OPERATOR"
-	case TExponentiationOperator:
-		tokenLexeme = "T_EXPONENTIATION_OPERATOR"
-	case TInteger:
-		tokenLexeme = "T_INTEGER"
-	case TFLoat:
-		tokenLexeme = "T_FLOAT"
+		tokenLexeme = OutputFor
+	case TDetach:
+		tokenLexeme = OutputDetach
+	// Type
+	case TNil:
+		tokenLexeme = OutputNil
+	case TGear:
+		tokenLexeme = OutputGear
+	case TTensor:
+		tokenLexeme = OutputTensor
+	case TState:
+		tokenLexeme = OutputState
+	case TMonodrone:
+		tokenLexeme = OutputMonodrone
+	case TOmnidrone:
+		tokenLexeme = OutputTensor
 	case TId:
-		tokenLexeme = "T_ID"
-	case TInputEnd:
-		tokenLexeme = "T_INPUT_END"
-	case TLexError:
-		tokenLexeme = "T_LEX_ERROR"
-	case TNilValue:
-		tokenLexeme = "T_NIL"
+		tokenLexeme = OutputId
+	// Structure
+	case TOpenParentheses:
+		tokenLexeme = OutputOpenParentheses
+	case TCloseParentheses:
+		tokenLexeme = OutputCloseParentheses
+	case TOpenBraces:
+		tokenLexeme = OutputOpenBraces
+	case TCloseBraces:
+		tokenLexeme = OutputCloseBraces
+	case TSingleLineComment:
+		tokenLexeme = OutputSingleLineComment
+	case TOpenMultilineComment:
+		tokenLexeme = OutputOpenMultilineComment
+	case TCloseMultilineComment:
+		tokenLexeme = OutputCloseMultilineComment
+	// Operators
+	case TGreaterThanOperator:
+		tokenLexeme = OutputGreaterThanOperator
+	case TGreaterEqualOperator:
+		tokenLexeme = OutputGreaterEqualOperator
+	case TLessThanOperator:
+		tokenLexeme = OutputLessThanOperator
+	case TLessEqualOperator:
+		tokenLexeme = OutputLessEqualOperator
+	case TNotEqualOperator:
+		tokenLexeme = OutputNotEqualOperator
+	case TAdditionOperator:
+		tokenLexeme = OutputAdditionOperator
+	case TSubtractionOperator:
+		tokenLexeme = OutputSubtractionOperator
+	case TMultiplicationOperator:
+		tokenLexeme = OutputMultiplicationOperator
+	case TDivisionOperator:
+		tokenLexeme = OutputDivisionOperator
+	case TModuleOperator:
+		tokenLexeme = OutputModuleOperator
+	case NotOperator:
+		tokenLexeme = OutputNotOperator
+	case TAndOperator:
+		tokenLexeme = OutputAndOperator
+	case TOrOperator:
+		tokenLexeme = OutputOrOperator
+	case TDeclarationOperator:
+		tokenLexeme = OutputDeclarationOperator
+	case TAttributionOperator:
+		tokenLexeme = OutputAttributionOperator
 	default:
 		tokenLexeme = "N/A"
 	}
@@ -365,7 +544,7 @@ func (lex *Lexical) Close(file string) {
 	custom_errors.Log(custom_errors.FileCloseSuccess, nil, custom_errors.InfoLevel)
 }
 
-func (lex *Lexical) writeOutput() error {
+func (lex *Lexical) WriteOutput() error {
 	if lex.OutputFile == nil {
 
 		return fmt.Errorf(custom_errors.UninitializedFile)
@@ -384,7 +563,7 @@ func (lex *Lexical) writeOutput() error {
 	return nil
 }
 
-func (lex *Lexical) showTokens() {
+func (lex *Lexical) ShowTokens() {
 	fmt.Println("Identified Tokens (Token/Lexeme):")
 	fmt.Println(lex.IdentifiedTokens.String())
 }
