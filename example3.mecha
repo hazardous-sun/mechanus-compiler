@@ -1,7 +1,7 @@
-{
+  {
    {
         0 Integrate
         (text)Send
         "Hello, world!" =: Omnidrone :text
    } ()main Architect
-} main Construct
+ } main Construct
