@@ -1,7 +1,8 @@
 package custom_errors
 
 const (
-	InvalidFIleName = "invalid file name"
+	InvalidFIleName   = "invalid file name"
+	UninitializedFile = "uninitialized file"
 
 	FileOpenSuccess = "successfully opened file"
 	FileOpenError   = "unable to open file"
