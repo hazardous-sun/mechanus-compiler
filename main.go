@@ -41,7 +41,9 @@ func main() {
 
 	for lex.Token != models.TInputEnd && lex.Token != models.TLexError {
 		lex.NextToken()
-		lex.DisplayToken()
+		if lex.Token != models.TSingleLineComment || lex.CommentBlock == false {
+			lex.DisplayToken()
+		}
 	}
 
 	if lex.Token == models.TLexError {
