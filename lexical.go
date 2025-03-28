@@ -295,7 +295,7 @@ func (lex *Lexical) open(fileName string) error {
 	return nil
 }
 
-func (lex *Lexical) close(file string) error {
+func (lex *Lexical) close(file string) {
 	custom_errors.Log(fmt.Sprintf("closing %s file", file), nil, custom_errors.InfoLevel)
 
 	switch file {
@@ -303,18 +303,17 @@ func (lex *Lexical) close(file string) error {
 		err := lex.inputFile.Close()
 		if err != nil {
 			custom_errors.Log(custom_errors.FileCloseError, &err, custom_errors.ErrorLevel)
-			return err
+			return
 		}
 	case "output":
 		err := lex.outputFile.Close()
 		if err != nil {
 			custom_errors.Log(custom_errors.FileCloseError, &err, custom_errors.ErrorLevel)
-			return err
+			return
 		}
 	}
 
 	custom_errors.Log(custom_errors.FileCloseSuccess, nil, custom_errors.InfoLevel)
-	return nil
 }
 
 func (lex *Lexical) writeOutput() error {
