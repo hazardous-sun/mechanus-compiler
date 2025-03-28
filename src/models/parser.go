@@ -10,8 +10,10 @@ import (
 // This is the structure responsible for analyzing the syntax of the Source file. It interacts directly with the lexical
 // analyzer and checks recursively for invalid tokens.
 type Parser struct {
-	Source *os.File
-	Output *os.File
+	Source       *os.File
+	Output       *os.File
+	SyntaxError  bool
+	LexicalError bool
 }
 
 func (p *Parser) Run() {
