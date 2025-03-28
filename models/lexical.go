@@ -722,7 +722,7 @@ func (lex *Lexical) DisplayToken() {
 		tokenLexeme = lex.displayStructureToken()
 	} else if lex.Token >= TGreaterThanOperator && lex.Token <= TNil {
 		tokenLexeme = lex.displayOperatorToken()
-	} else if lex.Token >= TNil && lex.Token <= TSend {
+	} else if lex.Token >= TNil && lex.Token < TSend {
 		tokenLexeme = lex.displayTypeToken()
 	} else {
 		tokenLexeme = lex.displayFunctions()
