@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	custom_errors "mechanus-compiler/error"
 	"os"
@@ -10,41 +11,58 @@ import (
 
 // Constants for token types
 const (
-	TModule                 = 1
-	TVariable               = 3
-	TComma                  = 4
-	TIf                     = 6
-	TElse                   = 7
-	TElseIf                 = 8
-	TFor                    = 9
-	TBreak                  = 11
-	TOpenParentheses        = 16
-	TCloseParentheses       = 17
-	TGreaterThanOperator    = 19
-	TLessThanOperator       = 20
-	TGreaterEqualOperator   = 21
-	TLessEqualOperator      = 22
-	TEqualOperator          = 23
-	TNotEqualOperator       = 24
-	TAdditionOperator       = 25
-	TSubtractionOperator    = 26
-	TMultiplicationOperator = 27
-	TDivisionOperator       = 28
-	TModuleOperator         = 29
-	TExponentiationOperator = 30
-	TInteger                = 31
-	TFLoat                  = 32
-	TId                     = 33
+	//	 Construction tokens
 
-	TInputEnd = 90
-	TLexError = 98
-	TNil      = 99
+	TModule   = 1
+	TVariable = 2
+	TComma    = 3
 
-	EOF = 26
+	//	 Conditional and repetition tokens
+
+	TIf     = 100
+	TElse   = 101
+	TElseIf = 102
+	TFor    = 103
+	TBreak  = 104
+
+	//	 Structure tokens
+
+	TOpenParentheses  = 200
+	TCloseParentheses = 201
+	TOpenBraces       = 202
+	TCloseBraces      = 203
+
+	//	 Operator tokens
+
+	TGreaterThanOperator    = 301
+	TLessThanOperator       = 302
+	TGreaterEqualOperator   = 303
+	TLessEqualOperator      = 304
+	TEqualOperator          = 305
+	TNotEqualOperator       = 306
+	TAdditionOperator       = 307
+	TSubtractionOperator    = 308
+	TMultiplicationOperator = 309
+	TDivisionOperator       = 310
+	TModuleOperator         = 311
+	TExponentiationOperator = 312
+
+	//	 Type tokens
+
+	TInteger = 401
+	TFLoat   = 402
+	TNil     = 404
+	TId      = 405
+
+	//	 Control tokens
+
+	TInputEnd = 900
+	TLexError = 901
+	TNilValue = 999
 )
 
-// Lexical struct to hold lexical analyzer state
-type Lexical struct {
+// lexical struct to hold lexical analyzer state
+type lexical struct {
 	inputFile        *os.File
 	rdInput          *bufio.Reader
 	outputFile       *os.File
@@ -59,22 +77,21 @@ type Lexical struct {
 	identifiedTokens strings.Builder
 }
 
-func (lex *Lexical) GetToken(inputFile string) (string, error) {
-	err := lex.open(inputFile)
-
-	if err != nil {
-		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
-		return "", err
+func NewLexical(inputFile, outputFile *os.File) lexical {
+	lex := lexical{
+		inputFile:     inputFile,
+		outputFile:    outputFile,
+		currentLine:   0,
+		currentColumn: 0,
+		pointer:       0,
+		inputLine:     "",
+		token:         TNilValue,
+		errorMessage:  "",
 	}
-	defer lex.close("input")
+	return lex
+}
 
-	lex.currentLine = 0
-	lex.currentColumn = 0
-	lex.pointer = 0
-	lex.inputLine = ""
-	lex.token = TNil
-	lex.errorMessage = ""
-
+func (lex *lexical) GetToken() (string, error) {
 	lex.movelookAhead()
 
 	for lex.token != TInputEnd && lex.token != TLexError {
@@ -82,19 +99,22 @@ func (lex *Lexical) GetToken(inputFile string) (string, error) {
 		lex.displayToken()
 	}
 
+	var err error = nil
+
 	if lex.token == TLexError {
-		fmt.Println("Erro Léxico:", lex.errorMessage)
+		err = errors.New(lex.errorMessage)
+		custom_errors.Log(fmt.Sprintf("Lexical error: %s", lex.errorMessage), &err, custom_errors.ErrorLevel)
 	} else {
-		fmt.Println("Análise Léxica terminada sem erros léxicos")
+		fmt.Println("Lexical analys completed with no errors")
 	}
 
 	lex.showTokens()
 	lex.writeOutput()
 
-	return lex.lexeme, nil
+	return lex.lexeme, err
 }
 
-func (lex *Lexical) movelookAhead() error {
+func (lex *lexical) movelookAhead() error {
 	if lex.pointer+1 > len(lex.inputLine) {
 		lex.currentLine++
 		lex.pointer = 0
@@ -116,7 +136,7 @@ func (lex *Lexical) movelookAhead() error {
 	return nil
 }
 
-func (lex *Lexical) nextToken() error {
+func (lex *lexical) nextToken() error {
 	var sbLexeme strings.Builder
 
 	for lex.lookAhead == ' ' || lex.lookAhead == '\t' || lex.lookAhead == '\n' || lex.lookAhead == '\r' {
@@ -137,7 +157,7 @@ func (lex *Lexical) nextToken() error {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (lex *Lexical) alphabeticalCharacter(sbLexeme strings.Builder) {
+func (lex *lexical) alphabeticalCharacter(sbLexeme strings.Builder) {
 	sbLexeme.WriteRune(lex.lookAhead)
 	lex.movelookAhead()
 
@@ -168,7 +188,7 @@ func (lex *Lexical) alphabeticalCharacter(sbLexeme strings.Builder) {
 	}
 }
 
-func (lex *Lexical) numericalCharacter(sbLexeme strings.Builder) {
+func (lex *lexical) numericalCharacter(sbLexeme strings.Builder) {
 	sbLexeme.WriteRune(lex.lookAhead)
 	lex.movelookAhead()
 	for lex.lookAhead >= '0' && lex.lookAhead <= '9' {
@@ -178,7 +198,7 @@ func (lex *Lexical) numericalCharacter(sbLexeme strings.Builder) {
 	lex.token = TInteger
 }
 
-func (lex *Lexical) symbolCharacter(sbLexeme strings.Builder) {
+func (lex *lexical) symbolCharacter(sbLexeme strings.Builder) {
 	switch lex.lookAhead {
 	case '(':
 		lex.token = TOpenParentheses
@@ -214,7 +234,7 @@ func (lex *Lexical) symbolCharacter(sbLexeme strings.Builder) {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (lex *Lexical) displayToken() {
+func (lex *lexical) displayToken() {
 	var tokenLexeme string
 	switch lex.token {
 	case TModule:
@@ -271,7 +291,7 @@ func (lex *Lexical) displayToken() {
 		tokenLexeme = "T_INPUT_END"
 	case TLexError:
 		tokenLexeme = "T_LEX_ERROR"
-	case TNil:
+	case TNilValue:
 		tokenLexeme = "T_NIL"
 	default:
 		tokenLexeme = "N/A"
@@ -280,22 +300,7 @@ func (lex *Lexical) displayToken() {
 	lex.storeTokens(tokenLexeme + " ( " + lex.lexeme + " )")
 }
 
-func (lex *Lexical) open(fileName string) error {
-	custom_errors.Log(fmt.Sprintf("opening '%s' file", fileName), nil, custom_errors.InfoLevel)
-	file, err := os.Open(fileName)
-
-	if err != nil {
-		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
-		return err
-	}
-
-	custom_errors.Log(custom_errors.FileOpenError, nil, custom_errors.ErrorLevel)
-	lex.inputFile = file
-	lex.rdInput = bufio.NewReader(file)
-	return nil
-}
-
-func (lex *Lexical) close(file string) {
+func (lex *lexical) close(file string) {
 	custom_errors.Log(fmt.Sprintf("closing %s file", file), nil, custom_errors.InfoLevel)
 
 	switch file {
@@ -316,7 +321,7 @@ func (lex *Lexical) close(file string) {
 	custom_errors.Log(custom_errors.FileCloseSuccess, nil, custom_errors.InfoLevel)
 }
 
-func (lex *Lexical) writeOutput() error {
+func (lex *lexical) writeOutput() error {
 	if lex.outputFile == nil {
 
 		return fmt.Errorf(custom_errors.UninitializedFile)
@@ -335,12 +340,12 @@ func (lex *Lexical) writeOutput() error {
 	return nil
 }
 
-func (lex *Lexical) showTokens() {
+func (lex *lexical) showTokens() {
 	fmt.Println("Identified Tokens (token/lexeme):")
 	fmt.Println(lex.identifiedTokens.String())
 }
 
-func (lex *Lexical) storeTokens(tokenIdentificado string) {
+func (lex *lexical) storeTokens(tokenIdentificado string) {
 	lex.identifiedTokens.WriteString(tokenIdentificado)
 	lex.identifiedTokens.WriteString("\n")
 }
