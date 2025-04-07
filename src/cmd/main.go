@@ -1,39 +1,28 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"mechanus-compiler/src/error"
 	"mechanus-compiler/src/models"
 	"os"
 )
 
 func main() {
-	// Open source file
-	sourceFile, err := os.Open("docs/examples/example1.mecha")
-
+	// Collect source and output files
+	sourceFile, outputFile, err := getFiles()
 	if err != nil {
 		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
-		return
+		os.Exit(1)
 	}
-	defer func(inputFile *os.File) {
-		err := inputFile.Close()
-		if err != nil {
+	defer func() {
+		if err := sourceFile.Close(); err != nil {
 			custom_errors.Log(custom_errors.FileCloseError, &err, custom_errors.ErrorLevel)
 		}
-	}(sourceFile)
-
-	// Create output file
-	outputFile, err := os.Create("output.txt")
-
-	if err != nil {
-		custom_errors.Log(custom_errors.FileCreateError, &err, custom_errors.ErrorLevel)
-		return
-	}
-	defer func(outputFile *os.File) {
-		err := outputFile.Close()
-		if err != nil {
+		if err := outputFile.Close(); err != nil {
 			custom_errors.Log(custom_errors.FileCloseError, &err, custom_errors.ErrorLevel)
 		}
-	}(outputFile)
+	}()
 
 	// Initialize the parser
 	parser := models.Parser{
@@ -43,4 +32,51 @@ func main() {
 
 	// Start the syntax analysis
 	parser.Run()
+}
+
+func getFiles() (*os.File, *os.File, error) {
+	// Get source file path
+	filePaths, err := getFilePaths()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Open source file
+	sourceFile, err := os.Open(filePaths[0])
+	if err != nil {
+		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
+		return nil, nil, err
+	}
+
+	// Create output file
+	outputFile, err := os.Create(filePaths[1])
+	if err != nil {
+		sourceFile.Close()
+		custom_errors.Log(custom_errors.FileCreateError, &err, custom_errors.ErrorLevel)
+		return nil, nil, err
+	}
+
+	return sourceFile, outputFile, nil
+}
+
+func getFilePaths() ([]string, error) {
+	// Define flags
+	inputFile := flag.String("i", "", "Source file path")
+	outputFile := flag.String("o", "", "Output file path")
+
+	// Parse command line arguments
+	flag.Parse()
+
+	// Check if required flags are provided
+	if *inputFile == "" {
+		err := errors.New(custom_errors.NoSourceFile)
+		custom_errors.Log(custom_errors.NoSourceFile, &err, custom_errors.ErrorLevel)
+		return nil, err
+	}
+
+	if *outputFile == "" {
+		*outputFile = "output"
+	}
+
+	return []string{*inputFile, *outputFile}, nil
 }

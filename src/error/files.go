@@ -1,6 +1,8 @@
 package custom_errors
 
 const (
+	NoSourceFile = "no source file was provided"
+
 	InvalidFIleName   = "invalid file name"
 	UninitializedFile = "uninitialized file"
 	EmptyFile         = "empty file"
