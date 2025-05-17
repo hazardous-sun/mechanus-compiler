@@ -74,6 +74,7 @@ func getFilePaths() ([]string, error) {
 		return nil, err
 	}
 
+	// If the output file name was not provided, default to "output"
 	if *outputFile == "" {
 		*outputFile = "output"
 	}
