@@ -63,3 +63,83 @@ func (p *Parser) Run() error {
 
 	return nil
 }
+
+func (p *Parser) parse() error {
+	err := p.g()
+
+	if err != nil {
+		err = log.EnrichError(err, "Parser.parse()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	return nil
+}
+
+// <G> ::= '{' <BODY> '}' <TEXT_WITHOUT_NUMBERS> 'Construct'
+func (p *Parser) g() error {
+	// Check for "Construct"
+	if p.lexical.GetToken() == TConstruct {
+		// Check if EOF was reached
+		if !p.lexical.WIP() {
+			err := fmt.Errorf("missing Construct body")
+			err = log.EnrichError(err, "Parser.g()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return err
+		}
+
+		_, err := p.lexical.NextToken()
+
+		if err != nil {
+			err = log.EnrichError(err, "Parser.g()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return err
+		}
+
+		// Check for Construct name
+		err = p.textWithoutNumbers()
+
+		if err != nil {
+			err = log.EnrichError(err, "Parser.g()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return err
+		}
+
+		token, err := p.lexical.NextToken()
+
+		if err != nil {
+			err = log.EnrichError(err, "Parser.g()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return err
+		}
+
+		// Check for "}"
+		if token != TCloseBraces {
+			err := unexpectedLexeme(p, "}")
+			err = log.EnrichError(err, "Parser.g()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return err
+		}
+
+		_, err = p.lexical.NextToken()
+
+		// Check for Construct body
+
+	} else {
+		err := unexpectedLexeme(p, Construct)
+		err = log.EnrichError(err, "Parser.g()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	return nil
+}
+
+func (p *Parser) textWithoutNumbers() error {
+	return nil
+}
+
+// Helper methods
+func unexpectedLexeme(p *Parser, expectedLexeme string) error {
+	return fmt.Errorf("%s: (%s) expected lexeme '%s', found '%s'", log.SyntaxError, p.lexical.DisplayPos(), expectedLexeme, p.lexical.GetLexeme())
+}
