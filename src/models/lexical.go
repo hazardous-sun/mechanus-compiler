@@ -55,7 +55,7 @@ func NewLexical(inputFile, outputFile *os.File) (Lexical, error) {
 		return Lexical{}, err
 	}
 
-	// Collects the first lexeme
+	// Collect the first lexeme
 	err = lex.moveLookAhead()
 
 	if err != nil {
@@ -94,25 +94,37 @@ func (lex *Lexical) readLines() error {
 
 // Moves the pointer to the next character in the current line. If the end of the line is reached, it loads the next
 // line.
+//
+// Fails when reaching EOF.
 func (lex *Lexical) moveLookAhead() error {
 	// end of line reached
 	lex.pointer--
+
+	// Check if the end of the line (right to left) was reached
 	if lex.pointer < 0 {
+		// Move the cursor up one line
 		err := lex.nextLine()
 
+		// Check if EOF was reached
 		if err != nil {
+			err = log.EnrichError(err, "Lexical.moveLookAhead()")
+			log.Log(err.Error(), log.InfoLevel)
 			return err
 		}
 
+		// Check if the current line is not empty
 		if len(lex.inputLine) >= 1 {
 			lex.lookAhead = rune(lex.inputLine[lex.pointer])
-		} else {
+		} else { // Move to the next line if it is
 			err := lex.moveLookAhead()
+
+			// Check if EOF was reached
 			if err != nil {
 				return err
 			}
 		}
-	} else {
+
+	} else { // If the end of the line was not reached, collect the next character
 		lex.currentColumn = lex.pointer + 1
 		lex.lookAhead = rune(lex.inputLine[lex.pointer])
 	}
