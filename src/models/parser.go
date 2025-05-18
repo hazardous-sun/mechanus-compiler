@@ -28,7 +28,9 @@ func (p *Parser) Run() {
 	}
 
 	for lex.WIP() {
-		err = lex.NextToken()
+		lexeme, err := lex.NextToken()
+
+		log.Log(lexeme, log.WarningLevel)
 
 		if err != nil {
 			break
