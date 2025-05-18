@@ -29,10 +29,6 @@ func (p *Parser) Run() {
 	for lex.WIP() {
 		err = lex.NextToken()
 
-		if !comment(&lex) {
-			lex.DisplayToken()
-		}
-
 		if err != nil {
 			break
 		}
