@@ -37,6 +37,8 @@ func NewParser(source, output *os.File) (Parser, error) {
 	}, nil
 }
 
+// Run :
+// Runs the syntax analysis.
 func (p *Parser) Run() error {
 	for p.lexical.WIP() {
 		_, err := p.lexical.NextToken()
@@ -78,7 +80,7 @@ func (p *Parser) parse() error {
 
 // <G> ::= '{' <BODY> '}' <TEXT_WITHOUT_NUMBERS> 'Construct'
 func (p *Parser) g() error {
-	// Check for "Construct"
+	// Check for TConstruct
 	if p.lexical.GetToken() != TConstruct {
 		err := unexpectedLexeme(p, Construct)
 		err = log.EnrichError(err, "Parser.g()")
@@ -171,12 +173,30 @@ func (p *Parser) g() error {
 	return nil
 }
 
+// (([A-Z]|[a-z])+(_)*)+
 func (p *Parser) textWithoutNumbers() error {
-	// TODO implement this logic
+	if p.lexical.GetToken() != TId {
+		err := unexpectedLexeme(p, "ID")
+		err = log.EnrichError(err, "Parser.textWithoutNumbers()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
 	return nil
 }
 
+// <BODY> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <TEXT_WITH_NUMBERS> 'Architect'
+// <BODY> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <TEXT_WITH_NUMBERS> 'Architect'
+// <BODY> ::= <BODY_REST>
 func (p *Parser) body() error {
+	// Check for "TArchitect" OR bodyRest()
+	return nil
+}
+
+// <BODY_REST> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <TEXT_WITH_NUMBERS> 'Architect' <BODY_REST>
+// <BODY_REST> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <TEXT_WITH_NUMBERS> 'Architect' <BODY_REST>
+// <BODY_REST> ::= ε
+func (p *Parser) bodyRest() error {
 	// TODO implement this logic
 	return nil
 }
