@@ -79,54 +79,90 @@ func (p *Parser) parse() error {
 // <G> ::= '{' <BODY> '}' <TEXT_WITHOUT_NUMBERS> 'Construct'
 func (p *Parser) g() error {
 	// Check for "Construct"
-	if p.lexical.GetToken() == TConstruct {
-		// Check if EOF was reached
-		if !p.lexical.WIP() {
-			err := fmt.Errorf("missing Construct body")
-			err = log.EnrichError(err, "Parser.g()")
-			log.Log(err.Error(), log.ErrorLevel)
-			return err
-		}
-
-		_, err := p.lexical.NextToken()
-
-		if err != nil {
-			err = log.EnrichError(err, "Parser.g()")
-			log.Log(err.Error(), log.ErrorLevel)
-			return err
-		}
-
-		// Check for Construct name
-		err = p.textWithoutNumbers()
-
-		if err != nil {
-			err = log.EnrichError(err, "Parser.g()")
-			log.Log(err.Error(), log.ErrorLevel)
-			return err
-		}
-
-		token, err := p.lexical.NextToken()
-
-		if err != nil {
-			err = log.EnrichError(err, "Parser.g()")
-			log.Log(err.Error(), log.ErrorLevel)
-			return err
-		}
-
-		// Check for "}"
-		if token != TCloseBraces {
-			err := unexpectedLexeme(p, "}")
-			err = log.EnrichError(err, "Parser.g()")
-			log.Log(err.Error(), log.ErrorLevel)
-			return err
-		}
-
-		_, err = p.lexical.NextToken()
-
-		// Check for Construct body
-
-	} else {
+	if p.lexical.GetToken() != TConstruct {
 		err := unexpectedLexeme(p, Construct)
+		err = log.EnrichError(err, "Parser.g()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	// Check if EOF was reached
+	if !p.lexical.WIP() {
+		err := fmt.Errorf("missing Construct body")
+		err = log.EnrichError(err, "Parser.g()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	_, err := p.lexical.NextToken()
+
+	if err != nil {
+		err = log.EnrichError(err, "Parser.g()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	// Check for Construct name
+	err = p.textWithoutNumbers()
+
+	if err != nil {
+		err = log.EnrichError(err, "Parser.g()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	token, err := p.lexical.NextToken()
+
+	if err != nil {
+		err = log.EnrichError(err, "Parser.g()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	// Check for "}"
+	if token != TCloseBraces {
+		err := unexpectedLexeme(p, "}")
+		err = log.EnrichError(err, "Parser.g()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	_, err = p.lexical.NextToken()
+
+	if err != nil {
+		err = log.EnrichError(err, "Parser.g()")
+	}
+
+	// Check for Construct body
+	err = p.body()
+
+	if err != nil {
+		err = log.EnrichError(err, "Parser.g()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	token, err = p.lexical.NextToken()
+
+	if err != nil {
+		err = log.EnrichError(err, "Parser.g()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	// Check for "{"
+	if token != TOpenBraces {
+		err := unexpectedLexeme(p, "{")
+		err = log.EnrichError(err, "Parser.g()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	_, err = p.lexical.NextToken()
+
+	// Check for EOF
+	if err == nil {
+		err = unexpectedLexeme(p, "EOF")
 		err = log.EnrichError(err, "Parser.g()")
 		log.Log(err.Error(), log.ErrorLevel)
 		return err
@@ -136,6 +172,12 @@ func (p *Parser) g() error {
 }
 
 func (p *Parser) textWithoutNumbers() error {
+	// TODO implement this logic
+	return nil
+}
+
+func (p *Parser) body() error {
+	// TODO implement this logic
 	return nil
 }
 
