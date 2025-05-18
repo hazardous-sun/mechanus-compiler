@@ -30,7 +30,6 @@ func (p *Parser) Run() {
 
 	for lex.WIP() {
 		lexeme, err := lex.NextToken()
-
 		log.Log(strconv.Itoa(lexeme), log.WarningLevel)
 
 		if err != nil {
