@@ -57,6 +57,13 @@ func NewLexical(inputFile, outputFile *os.File) (Lexical, error) {
 
 	// Collects the first lexeme
 	err = lex.moveLookAhead()
+
+	if err != nil {
+		err = log.EnrichError(err, "NewLexical()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return Lexical{}, err
+	}
+
 	return lex, nil
 }
 
