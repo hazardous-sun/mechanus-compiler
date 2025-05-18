@@ -80,7 +80,7 @@ func (lex *Lexical) readLines() error {
 	err := scanner.Err()
 
 	if err != nil {
-		err = log.EnrichError(err, "readLines()")
+		err = log.EnrichError(err, "Lexical.readLines()")
 		log.Log(err.Error(), log.ErrorLevel)
 		return err
 	}
