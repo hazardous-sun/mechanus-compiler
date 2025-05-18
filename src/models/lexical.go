@@ -85,6 +85,13 @@ func (lex *Lexical) readLines() error {
 		return err
 	}
 
+	if len(lex.lines) == 0 {
+		err := fmt.Errorf(log.EmptyFile)
+		err = log.EnrichError(err, "Lexical.readLines()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
 	lex.currentLine = len(lex.lines) - 1
 	lex.inputLine = lex.lines[lex.currentLine]
 	lex.currentColumn = len(lex.inputLine)
