@@ -120,15 +120,19 @@ func (lex *Lexical) moveLookAhead() error {
 }
 
 func (lex *Lexical) nextLine() error {
+	// Move up one line
 	lex.currentLine--
-	if lex.currentLine >= 0 {
-		lex.inputLine = lex.lines[lex.currentLine]
-		lex.pointer = len(lex.inputLine) - 1
-		return nil
-	} else {
+
+	// Check if the top of the file was reached
+	if lex.currentLine <= 0 {
 		log.Log(log.EndOfFileReached, log.InfoLevel)
 		return fmt.Errorf(log.EndOfFileReached)
 	}
+
+	// Collect the content of the line
+	lex.inputLine = lex.lines[lex.currentLine]
+	lex.pointer = len(lex.inputLine) - 1
+	return nil
 }
 
 // NextToken :
