@@ -22,23 +22,23 @@ const (
 
 // Log :
 // Logs a message to stdout.
-func Log(message string, err *error, level string) {
+func Log(message string, level string) {
 	switch level {
 	case InfoLevel:
 		log.Println(fmt.Sprintf("%sinfo: %s %s", infoColor, message, defaultColor))
 	case WarningLevel:
-		log.Println(fmt.Sprintf("%swarning: %s -> %v %s", warningColor, message, *err, defaultColor))
+		log.Println(fmt.Sprintf("%swarning: %s %s", warningColor, message, defaultColor))
 	case ErrorLevel:
-		log.Println(fmt.Sprintf("%serror: %s -> %v %s", errorColor, message, *err, defaultColor))
+		log.Println(fmt.Sprintf("%serror: %s %s", errorColor, message, defaultColor))
 	case SuccessLevel:
 		log.Println(fmt.Sprintf("%ssuccess: %s %s", successColor, message, defaultColor))
 	default:
-		log.Println("invalid log level")
+		log.Println(fmt.Sprintf("%sinvalid log level%s '%s'%s -> %s", errorColor, warningColor, level, defaultColor, message))
 	}
 }
 
 // EnrichError :
 // Enriches an error with extra context.
 func EnrichError(err error, msg string) error {
-	return fmt.Errorf(fmt.Sprintf("%s: %v", msg, err))
+	return fmt.Errorf("%s: %v", msg, err)
 }
