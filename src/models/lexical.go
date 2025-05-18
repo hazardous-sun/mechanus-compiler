@@ -133,6 +133,30 @@ func (lex *Lexical) DisplayToken() {
 	lex.storeTokens(tokenLexeme + " ( " + lex.lexeme + " )")
 }
 
+// GetToken :
+// Returns the current Token ID.
+func (lex *Lexical) GetToken() int {
+	return lex.token
+}
+
+// GetLexeme :
+// Returns the current lexeme.
+func (lex *Lexical) GetLexeme() string {
+	return lex.lexeme
+}
+
+// DisplayPos :
+// Returns the current line and column in a formatted string.
+func (lex *Lexical) DisplayPos() string {
+	return fmt.Sprintf("Line: %d, Column: %d", lex.currentLine, lex.currentColumn)
+}
+
+// GetPos :
+// Returns an array with the current line and column.
+func (lex *Lexical) GetPos() []int {
+	return []int{lex.currentLine, lex.currentColumn}
+}
+
 // Close :
 // Closes the specified file (either input or output).
 func (lex *Lexical) Close(file string) {
