@@ -1,14 +1,14 @@
 # Mechanus Derivation Tree
 
 ```
-<G> ::= '{' <BODY> '}' <TEXT_WITHOUT_NUMBERS> 'Construct'
+<G> ::= '{' <BODY> '}' <ID> 'Construct'
 
-<BODY> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <TEXT_WITH_NUMBERS> 'Architect'
-<BODY> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <TEXT_WITH_NUMBERS> 'Architect'
+<BODY> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect'
+<BODY> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'
 <BODY> ::= <BODY_REST>
 
-<BODY_REST> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <TEXT_WITH_NUMBERS> 'Architect' <BODY_REST>
-<BODY_REST> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <TEXT_WITH_NUMBERS> 'Architect' <BODY_REST>
+<BODY_REST> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' <BODY_REST>
+<BODY_REST> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect' <BODY_REST>
 <BODY_REST> ::= ε
 
 <TYPE> ::= 'Nil'
@@ -42,13 +42,13 @@
 
 <CMD_FOR> ::= '{' <CMDS> '}' 'for' <CONDITION>
 
-<CMD_DECLARATION> ::= <VAR> ':=' <E>
+<CMD_DECLARATION> ::= <E> '=:' <VAR>
 
-<CMD_ASSIGNMENT> ::= <VAR> '=' <E>
+<CMD_ASSIGNMENT> ::= <E> '=' <VAR> 
 
-<CMD_RECEIVE> ::= 'Receive' '(' <VAR> ')'
+<CMD_RECEIVE> ::= '(' <VAR> ')' 'Receive'
 
-<CMD_SEND> ::= 'Send' '(' <E> ')'
+<CMD_SEND> ::= '(' <E> ')' 'Send'
 
 <CONDITION> ::= <E> '>' <E> 
 <CONDITION> ::= <E> '>=' <E> 
@@ -76,12 +76,14 @@
 <X> ::= [0-9]+('.'[0-9]+)
 <X> ::= <VAR>
 
-<PARAMETERS> ::= <TEXT_WITH_NUMBERS> ':' <TYPE>
-<PARAMETERS> ::= <TEXT_WITH_NUMBERS> ':' <TYPE> <EXTRA_PARAMETERS>
+<PARAMETERS> ::= <ID> ':' <TYPE>
+<PARAMETERS> ::= <ID> ':' <TYPE> <EXTRA_PARAMETERS>
 
-<EXTRA_PARAMETERS> ::= ',' <TEXT_WITH_NUMBERS> ':' <TYPE>
-<EXTRA_PARAMETERS> ::= ',' <TEXT_WITH_NUMBERS> ':' <TYPE> ',' <PARAMETERS>
+<EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE>
+<EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> ',' <PARAMETERS>
 
-<TEXT_WITH_NUMBERS> ::= (([A-Z]|[a-z])+(_|[0-9])*)+
+<ID> ::= (([A-Z]|[a-z])+(_|[0-9])*)+
+
+<TEXT_WITH_NUMBERS> ::= (([A-Z]|[a-z])*(_|[0-9])*)+
 <TEXT_WITHOUT_NUMBERS> ::= (([A-Z]|[a-z])+(_)*)+
 ```
