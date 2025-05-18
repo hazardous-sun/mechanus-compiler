@@ -69,7 +69,7 @@ func NewLexical(inputFile, outputFile *os.File) (Lexical, error) {
 
 // Reads all lines from source file and stores them inside lex.lines
 //
-// Fails if it is not possible to read the source file.
+// Fails if it is not possible to read the source file, or if the source file is empty.
 func (lex *Lexical) readLines() error {
 	scanner := bufio.NewScanner(lex.inputFile)
 
