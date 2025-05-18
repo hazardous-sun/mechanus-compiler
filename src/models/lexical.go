@@ -227,6 +227,8 @@ func (lex *Lexical) ShowTokens() {
 // Internal controllers
 //**********************************************************************************************************************
 
+// ----- File handling -------------------------------------------------------------------------------------------------
+
 // Reads all lines from source file and stores them inside lex.lines
 //
 // Fails if it is not possible to read the source file, or if the source file is empty.
@@ -345,7 +347,16 @@ func (lex *Lexical) multilineCommentEnd() bool {
 	return false
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// Reverses a string. Used to output the correct lexeme
+func reverse(s string) string {
+	runes := []rune(s)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	return string(runes)
+}
+
+// ----- Lexeme identifiers --------------------------------------------------------------------------------------------
 
 // Checks if the current character is a separator (e.g., space, tab, newline).
 func (lex *Lexical) isSeparatorCharacter() bool {
@@ -398,7 +409,7 @@ func matchesSingleCharSymbols(lookAhead rune) bool {
 	}
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ----- Lexeme token ID generators ------------------------------------------------------------------------------------
 
 // Processes alphabetical characters to form identifiers or keywords.
 func (lex *Lexical) alphabeticalCharacter() error {
@@ -709,18 +720,7 @@ func (lex *Lexical) quoteCharacters() error {
 	return nil
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
-
-// Reverses a string. Used to output the correct lexeme
-func reverse(s string) string {
-	runes := []rune(s)
-	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-		runes[i], runes[j] = runes[j], runes[i]
-	}
-	return string(runes)
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
+// ----- Display methods -----------------------------------------------------------------------------------------------
 
 func (lex *Lexical) displayConstructionToken() string {
 	switch lex.token {
@@ -860,7 +860,7 @@ func (lex *Lexical) displayFunctions() string {
 	}
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ----- Helper methods ------------------------------------------------------------------------------------------------
 
 // Stores an identified token into the identifiedTokens builder.
 func (lex *Lexical) storeTokens(identifiedToken string) {
