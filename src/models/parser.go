@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "mechanus-compiler/src/error"
 	"os"
+	"strconv"
 )
 
 // Parser :
@@ -28,7 +29,9 @@ func (p *Parser) Run() {
 	}
 
 	for lex.WIP() {
-		err = lex.NextToken()
+		lexeme, err := lex.NextToken()
+
+		log.Log(strconv.Itoa(lexeme), log.WarningLevel)
 
 		if err != nil {
 			break

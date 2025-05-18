@@ -74,7 +74,7 @@ func NewLexical(inputFile, outputFile *os.File) (Lexical, error) {
 // NextToken :
 // Advances the lexer to the next token, checking for separators, alphabetical characters, numerical characters, string
 // literals, or symbols.
-func (lex *Lexical) NextToken() error {
+func (lex *Lexical) NextToken() (int, error) {
 	// Check if lex.lookAhead is inside a comment block
 	if lex.commentBlock {
 		err := lex.skipComment()
@@ -82,7 +82,7 @@ func (lex *Lexical) NextToken() error {
 		if err != nil {
 			err = log.EnrichError(err, "Lexical.NextToken()")
 			log.Log(err.Error(), log.ErrorLevel)
-			return err
+			return -1, err
 		}
 	} else {
 		for lex.isSeparatorCharacter() {
@@ -91,7 +91,7 @@ func (lex *Lexical) NextToken() error {
 			if err != nil {
 				err = log.EnrichError(err, "Lexical.NextToken()")
 				log.Log(err.Error(), log.InfoLevel)
-				return err
+				return -1, err
 			}
 		}
 	}
@@ -111,10 +111,10 @@ func (lex *Lexical) NextToken() error {
 	if err != nil {
 		err = log.EnrichError(err, "Lexical.NextToken()")
 		log.Log(err.Error(), log.ErrorLevel)
-		return err
+		return -1, err
 	}
 
-	return nil
+	return lex.token, nil
 }
 
 // WIP :
@@ -128,21 +128,7 @@ func (lex *Lexical) WIP() bool {
 func (lex *Lexical) DisplayToken() {
 	var tokenLexeme string
 	lex.lexeme = reverse(lex.lexeme)
-
-	if lex.token >= TConstruct && lex.token < TIf {
-		tokenLexeme = lex.displayConstructionToken()
-	} else if lex.token >= TIf && lex.token < TOpenParentheses {
-		tokenLexeme = lex.displayConditionalRepetitionToken()
-	} else if lex.token >= TOpenParentheses && lex.token < TGreaterThanOperator {
-		tokenLexeme = lex.displayStructureToken()
-	} else if lex.token >= TGreaterThanOperator && lex.token <= TNil {
-		tokenLexeme = lex.displayOperatorToken()
-	} else if lex.token >= TNil && lex.token < TSend {
-		tokenLexeme = lex.displayTypeToken()
-	} else {
-		tokenLexeme = lex.displayFunctions()
-	}
-
+	tokenLexeme = lex.identifyDisplayToken()
 	fmt.Println(tokenLexeme + " ( " + lex.lexeme + " )")
 	lex.storeTokens(tokenLexeme + " ( " + lex.lexeme + " )")
 }
@@ -721,6 +707,22 @@ func (lex *Lexical) quoteCharacters() error {
 }
 
 // ----- Display methods -----------------------------------------------------------------------------------------------
+
+func (lex *Lexical) identifyDisplayToken() string {
+	if lex.token >= TConstruct && lex.token < TIf {
+		return lex.displayConstructionToken()
+	} else if lex.token >= TIf && lex.token < TOpenParentheses {
+		return lex.displayConditionalRepetitionToken()
+	} else if lex.token >= TOpenParentheses && lex.token < TGreaterThanOperator {
+		return lex.displayStructureToken()
+	} else if lex.token >= TGreaterThanOperator && lex.token <= TNil {
+		return lex.displayOperatorToken()
+	} else if lex.token >= TNil && lex.token < TSend {
+		return lex.displayTypeToken()
+	} else {
+		return lex.displayFunctions()
+	}
+}
 
 func (lex *Lexical) displayConstructionToken() string {
 	switch lex.token {
