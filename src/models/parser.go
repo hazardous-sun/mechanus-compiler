@@ -1,8 +1,8 @@
 package models
 
 import (
-	"errors"
-	custom_errors "mechanus-compiler/src/error"
+	"fmt"
+	log "mechanus-compiler/src/error"
 	"os"
 )
 
@@ -18,19 +18,11 @@ type Parser struct {
 
 func (p *Parser) Run() {
 	// Initialize input and Output files insde Lexical
-	lex := NewLexical(p.Source, p.Output)
-
-	// Start looking for tokens
-	err := lex.ReadLines()
+	lex, err := NewLexical(p.Source, p.Output)
 
 	if err != nil {
-		custom_errors.Log(custom_errors.EmptyFile, &err, custom_errors.ErrorLevel)
-		return
-	}
-
-	err = lex.MoveLookAhead()
-
-	if err != nil {
+		err = log.EnrichError(err, "Parser.Run()")
+		log.Log(err.Error(), log.ErrorLevel)
 		return
 	}
 
@@ -47,14 +39,13 @@ func (p *Parser) Run() {
 	}
 
 	if lex.token == TLexError {
-		err = errors.New(lex.errorMessage)
-		custom_errors.Log(custom_errors.LexicalError, &err, custom_errors.ErrorLevel)
+		err = fmt.Errorf("%s -> %s", log.LexicalError, lex.errorMessage)
+		log.Log(err.Error(), log.ErrorLevel)
 	} else {
-		custom_errors.Log(custom_errors.LexicalSuccess, nil, custom_errors.SuccessLevel)
+		log.Log(log.LexicalSuccess, log.SuccessLevel)
 		err = lex.WriteOutput()
 	}
 
-	//lex.ShowTokens()
 	return
 }
 

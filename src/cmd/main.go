@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
-	"mechanus-compiler/src/error"
+	log "mechanus-compiler/src/error"
 	"mechanus-compiler/src/models"
 	"os"
 )
@@ -12,15 +12,18 @@ func main() {
 	// Collect source and output files
 	sourceFile, outputFile, err := getFiles()
 	if err != nil {
-		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
+		err = log.EnrichError(err, log.FileOpenError)
+		log.Log(err.Error(), log.ErrorLevel)
 		os.Exit(1)
 	}
 	defer func() {
 		if err := sourceFile.Close(); err != nil {
-			custom_errors.Log(custom_errors.FileCloseError, &err, custom_errors.ErrorLevel)
+			err = log.EnrichError(err, log.FileCloseError)
+			log.Log(err.Error(), log.ErrorLevel)
 		}
 		if err := outputFile.Close(); err != nil {
-			custom_errors.Log(custom_errors.FileCloseError, &err, custom_errors.ErrorLevel)
+			err = log.EnrichError(err, log.FileCloseError)
+			log.Log(err.Error(), log.ErrorLevel)
 		}
 	}()
 
@@ -44,15 +47,22 @@ func getFiles() (*os.File, *os.File, error) {
 	// Open source file
 	sourceFile, err := os.Open(filePaths[0])
 	if err != nil {
-		custom_errors.Log(custom_errors.FileOpenError, &err, custom_errors.ErrorLevel)
+		err = log.EnrichError(err, log.FileOpenError)
+		log.Log(err.Error(), log.ErrorLevel)
 		return nil, nil, err
 	}
 
 	// Create output file
 	outputFile, err := os.Create(filePaths[1])
 	if err != nil {
-		sourceFile.Close()
-		custom_errors.Log(custom_errors.FileCreateError, &err, custom_errors.ErrorLevel)
+		err = log.EnrichError(err, log.FileCreateError)
+		err2 := sourceFile.Close()
+
+		if err2 != nil {
+			err = log.EnrichError(err, err2.Error())
+		}
+
+		log.Log(err.Error(), log.ErrorLevel)
 		return nil, nil, err
 	}
 
@@ -69,8 +79,8 @@ func getFilePaths() ([]string, error) {
 
 	// Check if required flags are provided
 	if *inputFile == "" {
-		err := errors.New(custom_errors.NoSourceFile)
-		custom_errors.Log(custom_errors.NoSourceFile, &err, custom_errors.ErrorLevel)
+		err := errors.New(log.NoSourceFile)
+		log.Log(err.Error(), log.ErrorLevel)
 		return nil, err
 	}
 
