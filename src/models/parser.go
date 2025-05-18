@@ -20,6 +20,7 @@ func (p *Parser) Run() {
 	// Initialize Lexical
 	lex, err := NewLexical(p.Source, p.Output)
 
+	// Check for errors during Lexical initialization
 	if err != nil {
 		err = log.EnrichError(err, "Parser.Run()")
 		log.Log(err.Error(), log.ErrorLevel)
@@ -34,20 +35,14 @@ func (p *Parser) Run() {
 		}
 	}
 
-	if lex.token == TLexError {
+	// Check if Lexical failed to reach EOF
+	if lex.Fail() {
 		err = fmt.Errorf("%s -> %s", log.LexicalError, lex.errorMessage)
 		log.Log(err.Error(), log.ErrorLevel)
-	} else {
-		log.Log(log.LexicalSuccess, log.SuccessLevel)
-		err = lex.WriteOutput()
 	}
 
-	return
-}
+	log.Log(log.LexicalSuccess, log.SuccessLevel)
+	err = lex.WriteOutput()
 
-func comment(lex *Lexical) bool {
-	return lex.token == TSingleLineComment ||
-		lex.token == TOpenMultilineComment ||
-		lex.token == TCloseMultilineComment ||
-		lex.commentBlock == true
+	return
 }

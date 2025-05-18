@@ -27,6 +27,10 @@ type Lexical struct {
 	commentBlock     bool
 }
 
+//**********************************************************************************************************************
+// Public controllers
+//**********************************************************************************************************************
+
 // NewLexical :
 // Initializes a new Lexical instance with the provided input and output files. It also sets up various initial values
 // for the lexer.
@@ -66,6 +70,162 @@ func NewLexical(inputFile, outputFile *os.File) (Lexical, error) {
 
 	return lex, nil
 }
+
+// NextToken :
+// Advances the lexer to the next token, checking for separators, alphabetical characters, numerical characters, string
+// literals, or symbols.
+func (lex *Lexical) NextToken() error {
+	// Check if lex.lookAhead is inside a comment block
+	if lex.commentBlock {
+		err := lex.skipComment()
+
+		if err != nil {
+			err = log.EnrichError(err, "Lexical.NextToken()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return err
+		}
+	} else {
+		for lex.isSeparatorCharacter() {
+			err := lex.moveLookAhead()
+
+			if err != nil {
+				err = log.EnrichError(err, "Lexical.NextToken()")
+				log.Log(err.Error(), log.InfoLevel)
+				return err
+			}
+		}
+	}
+
+	var err error
+
+	if lex.isAlphabeticalCharacter() {
+		err = lex.alphabeticalCharacter()
+	} else if lex.isNumericalCharacter() {
+		err = lex.numericalCharacter()
+	} else if lex.isQuotation() {
+		err = lex.quoteCharacters()
+	} else {
+		err = lex.symbolCharacter()
+	}
+
+	if err != nil {
+		err = log.EnrichError(err, "Lexical.NextToken()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	return nil
+}
+
+// WIP :
+// Checks if Lexical should keep working.
+func (lex *Lexical) WIP() bool {
+	return lex.token != TInputEnd && lex.token != TLexError
+}
+
+// DisplayToken :
+// Displays the current token and lexeme to the output.
+func (lex *Lexical) DisplayToken() {
+	var tokenLexeme string
+	lex.lexeme = reverse(lex.lexeme)
+
+	if lex.token >= TConstruct && lex.token < TIf {
+		tokenLexeme = lex.displayConstructionToken()
+	} else if lex.token >= TIf && lex.token < TOpenParentheses {
+		tokenLexeme = lex.displayConditionalRepetitionToken()
+	} else if lex.token >= TOpenParentheses && lex.token < TGreaterThanOperator {
+		tokenLexeme = lex.displayStructureToken()
+	} else if lex.token >= TGreaterThanOperator && lex.token <= TNil {
+		tokenLexeme = lex.displayOperatorToken()
+	} else if lex.token >= TNil && lex.token < TSend {
+		tokenLexeme = lex.displayTypeToken()
+	} else {
+		tokenLexeme = lex.displayFunctions()
+	}
+
+	fmt.Println(tokenLexeme + " ( " + lex.lexeme + " )")
+	lex.storeTokens(tokenLexeme + " ( " + lex.lexeme + " )")
+}
+
+// Close :
+// Closes the specified file (either input or output).
+func (lex *Lexical) Close(file string) {
+	log.Log(fmt.Sprintf("closing %s file", file), log.InfoLevel)
+
+	switch file {
+	case "input":
+		err := lex.inputFile.Close()
+
+		if err != nil {
+			err = log.EnrichError(err, "Lexical.Close()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return
+		}
+	case "output":
+		err := lex.outputFile.Close()
+
+		if err != nil {
+			err = log.EnrichError(err, "Lexical.Close()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return
+		}
+	}
+
+	log.Log(log.FileCloseSuccess, log.SuccessLevel)
+}
+
+// Fail :
+// Checks if the Lexical failed to reach EOF.
+func (lex *Lexical) Fail() bool {
+	return lex.token == TLexError
+}
+
+// WriteOutput :
+// Writes the identified tokens to the output file.
+func (lex *Lexical) WriteOutput() error {
+	if lex.outputFile == nil {
+
+		return fmt.Errorf(log.UninitializedFile)
+	}
+
+	file, err := os.Create("output.txt")
+
+	if err != nil {
+		err = log.EnrichError(err, "WriteOutput()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			err = log.EnrichError(err, "WriteOutput()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return
+		}
+	}(file)
+
+	_, err = file.WriteString(lex.identifiedTokens.String())
+
+	if err != nil {
+		err = log.EnrichError(err, "WriteOutput()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	log.Log(log.FileCreateSuccess, log.SuccessLevel)
+	return nil
+}
+
+// ShowTokens :
+// Displays the list of identified tokens.
+func (lex *Lexical) ShowTokens() {
+	log.Log(log.IdentifiedTokens, log.SuccessLevel)
+	fmt.Println(lex.identifiedTokens.String())
+}
+
+//**********************************************************************************************************************
+// Internal controllers
+//**********************************************************************************************************************
 
 // Reads all lines from source file and stores them inside lex.lines
 //
@@ -152,80 +312,6 @@ func (lex *Lexical) nextLine() error {
 	// Collect the content of the line
 	lex.inputLine = lex.lines[lex.currentLine]
 	lex.pointer = len(lex.inputLine) - 1
-	return nil
-}
-
-// NextToken :
-// Advances the lexer to the next token, checking for separators, alphabetical characters, numerical characters, string
-// literals, or symbols.
-func (lex *Lexical) NextToken() error {
-	// Check if lex.lookAhead is inside a comment block
-	if lex.commentBlock {
-		err := lex.skipComment()
-
-		if err != nil {
-			err = log.EnrichError(err, "Lexical.NextToken()")
-			log.Log(err.Error(), log.ErrorLevel)
-			return err
-		}
-	} else {
-		for lex.isSeparatorCharacter() {
-			err := lex.moveLookAhead()
-
-			if err != nil {
-				err = log.EnrichError(err, "Lexical.NextToken()")
-				log.Log(err.Error(), log.InfoLevel)
-				return err
-			}
-		}
-	}
-
-	var err error
-
-	if lex.isAlphabeticalCharacter() {
-		err = lex.alphabeticalCharacter()
-	} else if lex.isNumericalCharacter() {
-		err = lex.numericalCharacter()
-	} else if lex.isQuotation() {
-		err = lex.quoteCharacters()
-	} else {
-		err = lex.symbolCharacter()
-	}
-
-	if err != nil {
-		err = log.EnrichError(err, "Lexical.NextToken()")
-		log.Log(err.Error(), log.ErrorLevel)
-		return err
-	}
-
-	return nil
-}
-
-// WIP :
-// Checks if Lexical should keep working.
-func (lex *Lexical) WIP() bool {
-	return lex.token != TInputEnd && lex.token != TLexError
-}
-
-// Handles symbols like operators, delimiters, and comments.
-func (lex *Lexical) symbolCharacter() error {
-	temp := lex.lookAhead
-	err := lex.moveLookAhead()
-
-	if err != nil {
-		err = log.EnrichError(err, "Lexical.symbolCharacter()")
-		log.Log(err.Error(), log.ErrorLevel)
-		return err
-	}
-
-	err = lex.multiSymbolCharacter(temp)
-
-	if err != nil {
-		err = log.EnrichError(err, "Lexical.symbolCharacter()")
-		log.Log(err.Error(), log.ErrorLevel)
-		return err
-	}
-
 	return nil
 }
 
@@ -407,6 +493,28 @@ func (lex *Lexical) numericalCharacter() error {
 		lex.token = TGear
 	} else {
 		lex.token = TTensor
+	}
+
+	return nil
+}
+
+// Handles symbols like operators, delimiters, and comments.
+func (lex *Lexical) symbolCharacter() error {
+	temp := lex.lookAhead
+	err := lex.moveLookAhead()
+
+	if err != nil {
+		err = log.EnrichError(err, "Lexical.symbolCharacter()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	err = lex.multiSymbolCharacter(temp)
+
+	if err != nil {
+		err = log.EnrichError(err, "Lexical.symbolCharacter()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
 	}
 
 	return nil
@@ -603,32 +711,6 @@ func (lex *Lexical) quoteCharacters() error {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-// DisplayToken :
-// Displays the current token and lexeme to the output.
-func (lex *Lexical) DisplayToken() {
-	var tokenLexeme string
-	lex.lexeme = reverse(lex.lexeme)
-
-	if lex.token >= TConstruct && lex.token < TIf {
-		tokenLexeme = lex.displayConstructionToken()
-	} else if lex.token >= TIf && lex.token < TOpenParentheses {
-		tokenLexeme = lex.displayConditionalRepetitionToken()
-	} else if lex.token >= TOpenParentheses && lex.token < TGreaterThanOperator {
-		tokenLexeme = lex.displayStructureToken()
-	} else if lex.token >= TGreaterThanOperator && lex.token <= TNil {
-		tokenLexeme = lex.displayOperatorToken()
-	} else if lex.token >= TNil && lex.token < TSend {
-		tokenLexeme = lex.displayTypeToken()
-	} else {
-		tokenLexeme = lex.displayFunctions()
-	}
-
-	fmt.Println(tokenLexeme + " ( " + lex.lexeme + " )")
-	lex.storeTokens(tokenLexeme + " ( " + lex.lexeme + " )")
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-
 // Reverses a string. Used to output the correct lexeme
 func reverse(s string) string {
 	runes := []rune(s)
@@ -779,76 +861,6 @@ func (lex *Lexical) displayFunctions() string {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-
-// Close :
-// Closes the specified file (either input or output).
-func (lex *Lexical) Close(file string) {
-	log.Log(fmt.Sprintf("closing %s file", file), log.InfoLevel)
-
-	switch file {
-	case "input":
-		err := lex.inputFile.Close()
-
-		if err != nil {
-			err = log.EnrichError(err, "Lexical.Close()")
-			log.Log(err.Error(), log.ErrorLevel)
-			return
-		}
-	case "output":
-		err := lex.outputFile.Close()
-
-		if err != nil {
-			err = log.EnrichError(err, "Lexical.Close()")
-			log.Log(err.Error(), log.ErrorLevel)
-			return
-		}
-	}
-
-	log.Log(log.FileCloseSuccess, log.SuccessLevel)
-}
-
-// WriteOutput :
-// Writes the identified tokens to the output file.
-func (lex *Lexical) WriteOutput() error {
-	if lex.outputFile == nil {
-
-		return fmt.Errorf(log.UninitializedFile)
-	}
-
-	file, err := os.Create("output.txt")
-
-	if err != nil {
-		err = log.EnrichError(err, "WriteOutput()")
-		log.Log(err.Error(), log.ErrorLevel)
-		return err
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			err = log.EnrichError(err, "WriteOutput()")
-			log.Log(err.Error(), log.ErrorLevel)
-			return
-		}
-	}(file)
-
-	_, err = file.WriteString(lex.identifiedTokens.String())
-
-	if err != nil {
-		err = log.EnrichError(err, "WriteOutput()")
-		log.Log(err.Error(), log.ErrorLevel)
-		return err
-	}
-
-	log.Log(log.FileCreateSuccess, log.SuccessLevel)
-	return nil
-}
-
-// ShowTokens :
-// Displays the list of identified tokens.
-func (lex *Lexical) ShowTokens() {
-	log.Log(log.IdentifiedTokens, log.SuccessLevel)
-	fmt.Println(lex.identifiedTokens.String())
-}
 
 // Stores an identified token into the identifiedTokens builder.
 func (lex *Lexical) storeTokens(identifiedToken string) {
