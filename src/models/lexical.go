@@ -119,6 +119,7 @@ func (lex *Lexical) moveLookAhead() error {
 	return nil
 }
 
+// Moves the cursor one line up
 func (lex *Lexical) nextLine() error {
 	// Move up one line
 	lex.currentLine--
