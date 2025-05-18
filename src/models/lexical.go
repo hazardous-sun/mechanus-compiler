@@ -12,19 +12,19 @@ import (
 // This is the structure responsible for making the lexical analysis of the source file. It checks for unrecognized
 // lexemes and, if it finds one, it returns an error code.
 type Lexical struct {
-	InputFile        *os.File
-	Lines            []string
-	OutputFile       *os.File
-	LookAhead        rune
-	Token            int
-	Lexeme           string
-	Pointer          int
-	InputLine        string
-	CurrentLine      int
-	CurrentColumn    int
-	ErrorMessage     string
-	IdentifiedTokens strings.Builder
-	CommentBlock     bool
+	inputFile        *os.File
+	lines            []string
+	outputFile       *os.File
+	lookAhead        rune
+	token            int
+	lexeme           string
+	pointer          int
+	inputLine        string
+	currentLine      int
+	currentColumn    int
+	errorMessage     string
+	identifiedTokens strings.Builder
+	commentBlock     bool
 }
 
 // NewLexical :
@@ -32,35 +32,35 @@ type Lexical struct {
 // for the lexer.
 func NewLexical(inputFile, outputFile *os.File) Lexical {
 	lex := Lexical{
-		InputFile:     inputFile,
-		OutputFile:    outputFile,
-		Lines:         make([]string, 0),
-		CurrentLine:   0,
-		CurrentColumn: 0,
-		Pointer:       0,
-		InputLine:     "",
-		Token:         TNilValue,
-		ErrorMessage:  "",
+		inputFile:     inputFile,
+		outputFile:    outputFile,
+		lines:         make([]string, 0),
+		currentLine:   0,
+		currentColumn: 0,
+		pointer:       0,
+		inputLine:     "",
+		token:         TNilValue,
+		errorMessage:  "",
 	}
 	return lex
 }
 
 // ReadLines :
-// Reads all lines from source file and stores them inside lex.Lines
+// Reads all lines from source file and stores them inside lex.lines
 func (lex *Lexical) ReadLines() error {
-	scanner := bufio.NewScanner(lex.InputFile)
+	scanner := bufio.NewScanner(lex.inputFile)
 
 	for scanner.Scan() {
-		lex.Lines = append(lex.Lines, scanner.Text())
+		lex.lines = append(lex.lines, scanner.Text())
 	}
 
 	err := scanner.Err()
 
 	if err == nil {
-		lex.CurrentLine = len(lex.Lines) - 1
-		lex.InputLine = lex.Lines[lex.CurrentLine]
-		lex.CurrentColumn = len(lex.InputLine)
-		lex.Pointer = lex.CurrentColumn
+		lex.currentLine = len(lex.lines) - 1
+		lex.inputLine = lex.lines[lex.currentLine]
+		lex.currentColumn = len(lex.inputLine)
+		lex.pointer = lex.currentColumn
 	}
 
 	return err
@@ -71,16 +71,16 @@ func (lex *Lexical) ReadLines() error {
 // line.
 func (lex *Lexical) MoveLookAhead() error {
 	// end of line reached
-	lex.Pointer--
-	if lex.Pointer < 0 {
+	lex.pointer--
+	if lex.pointer < 0 {
 		err := lex.nextLine()
 
 		if err != nil {
 			return err
 		}
 
-		if len(lex.InputLine) >= 1 {
-			lex.LookAhead = rune(lex.InputLine[lex.Pointer])
+		if len(lex.inputLine) >= 1 {
+			lex.lookAhead = rune(lex.inputLine[lex.pointer])
 		} else {
 			err := lex.MoveLookAhead()
 			if err != nil {
@@ -88,17 +88,17 @@ func (lex *Lexical) MoveLookAhead() error {
 			}
 		}
 	} else {
-		lex.CurrentColumn = lex.Pointer + 1
-		lex.LookAhead = rune(lex.InputLine[lex.Pointer])
+		lex.currentColumn = lex.pointer + 1
+		lex.lookAhead = rune(lex.inputLine[lex.pointer])
 	}
 	return nil
 }
 
 func (lex *Lexical) nextLine() error {
-	lex.CurrentLine--
-	if lex.CurrentLine >= 0 {
-		lex.InputLine = lex.Lines[lex.CurrentLine]
-		lex.Pointer = len(lex.InputLine) - 1
+	lex.currentLine--
+	if lex.currentLine >= 0 {
+		lex.inputLine = lex.lines[lex.currentLine]
+		lex.pointer = len(lex.inputLine) - 1
 		return nil
 	} else {
 		custom_errors2.Log(custom_errors2.EndOfFileReached, nil, custom_errors2.InfoLevel)
@@ -111,8 +111,8 @@ func (lex *Lexical) nextLine() error {
 // literals, or symbols.
 func (lex *Lexical) NextToken() error {
 	var err error
-	// Check if lex.LookAhead is inside a comment block
-	if lex.CommentBlock {
+	// Check if lex.lookAhead is inside a comment block
+	if lex.commentBlock {
 		err = lex.skipComment()
 	} else {
 		for lex.isSeparatorCharacter() {
@@ -141,7 +141,7 @@ func (lex *Lexical) NextToken() error {
 
 // Handles symbols like operators, delimiters, and comments.
 func (lex *Lexical) symbolCharacter() error {
-	temp := lex.LookAhead
+	temp := lex.lookAhead
 	err := lex.MoveLookAhead()
 	if err != nil {
 		return err
@@ -166,13 +166,13 @@ func (lex *Lexical) skipComment() error {
 
 // Checks if the current position marks the end of a multiline comment.
 func (lex *Lexical) multilineCommentEnd() bool {
-	// Checks that pointing to lex.Pointer+1 won't raise an index out of bound exception
+	// Checks that pointing to lex.pointer+1 won't raise an index out of bound exception
 	// AND
-	// Checks if lex.LookAhead == '*'
+	// Checks if lex.lookAhead == '*'
 	// AND
 	// Checks if the current char + the next char == CloseMultilineComment
-	if lex.Pointer+1 <= len(lex.InputLine) && lex.LookAhead == '*' {
-		temp := fmt.Sprintf("%c%c", lex.LookAhead, lex.InputLine[lex.Pointer])
+	if lex.pointer+1 <= len(lex.inputLine) && lex.lookAhead == '*' {
+		temp := fmt.Sprintf("%c%c", lex.lookAhead, lex.inputLine[lex.pointer])
 		if temp == CloseMultilineComment {
 			return true
 		}
@@ -184,30 +184,30 @@ func (lex *Lexical) multilineCommentEnd() bool {
 
 // Checks if the current character is a separator (e.g., space, tab, newline).
 func (lex *Lexical) isSeparatorCharacter() bool {
-	return lex.LookAhead == ' ' || lex.LookAhead == '\t' || lex.LookAhead == '\n' || lex.LookAhead == '\r'
+	return lex.lookAhead == ' ' || lex.lookAhead == '\t' || lex.lookAhead == '\n' || lex.lookAhead == '\r'
 }
 
 // Checks if the current character is an alphabetical letter (A-Z or a-z).
 func (lex *Lexical) isAlphabeticalCharacter() bool {
-	return (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= 'a' && lex.LookAhead <= 'z')
+	return (lex.lookAhead >= 'A' && lex.lookAhead <= 'Z') || (lex.lookAhead >= 'a' && lex.lookAhead <= 'z')
 }
 
 // Checks if the current character is a numerical digit (0-9).
 func (lex *Lexical) isNumericalCharacter() bool {
-	return lex.LookAhead >= '0' && lex.LookAhead <= '9'
+	return lex.lookAhead >= '0' && lex.lookAhead <= '9'
 }
 
 // Checks if the current character is a quote (single or double).
 func (lex *Lexical) isQuotation() bool {
-	return lex.LookAhead == SingleQuote || lex.LookAhead == DoubleQuote
+	return lex.lookAhead == SingleQuote || lex.lookAhead == DoubleQuote
 }
 
 // Checks if the current character could be part of a multi-character symbol like an operator.
 func (lex *Lexical) isMultiCharacterSymbol() bool {
-	if matchesSingleCharSymbols(lex.LookAhead) {
+	if matchesSingleCharSymbols(lex.lookAhead) {
 		return false
 	}
-	return (lex.Pointer+1) < len(lex.InputLine) && (lex.InputLine[lex.Pointer+1] >= '&' && lex.InputLine[lex.Pointer+1] <= '/')
+	return (lex.pointer+1) < len(lex.inputLine) && (lex.inputLine[lex.pointer+1] >= '&' && lex.inputLine[lex.pointer+1] <= '/')
 }
 
 func matchesSingleCharSymbols(lookAhead rune) bool {
@@ -239,55 +239,55 @@ func matchesSingleCharSymbols(lookAhead rune) bool {
 func (lex *Lexical) alphabeticalCharacter() error {
 	sbLexeme := strings.Builder{}
 
-	for (lex.LookAhead >= 'A' && lex.LookAhead <= 'Z') || (lex.LookAhead >= 'a' && lex.LookAhead <= 'z') || (lex.LookAhead >= '0' && lex.LookAhead <= '9') || lex.LookAhead == '_' {
-		sbLexeme.WriteRune(lex.LookAhead)
+	for (lex.lookAhead >= 'A' && lex.lookAhead <= 'Z') || (lex.lookAhead >= 'a' && lex.lookAhead <= 'z') || (lex.lookAhead >= '0' && lex.lookAhead <= '9') || lex.lookAhead == '_' {
+		sbLexeme.WriteRune(lex.lookAhead)
 		err := lex.MoveLookAhead()
 		if err != nil {
 			return err
 		}
 	}
 
-	lex.Lexeme = sbLexeme.String()
+	lex.lexeme = sbLexeme.String()
 
-	switch reverse(strings.ToUpper(lex.Lexeme)) {
+	switch reverse(strings.ToUpper(lex.lexeme)) {
 	// Construction tokens
 	case Construct:
-		lex.Token = TConstruct
+		lex.token = TConstruct
 	case Architect:
-		lex.Token = TArchitect
+		lex.token = TArchitect
 	case Integrate:
-		lex.Token = TIntegrate
+		lex.token = TIntegrate
 	// Conditional and repetition tokens
 	case If:
-		lex.Token = TIf
+		lex.token = TIf
 	case Else:
-		lex.Token = TElse
+		lex.token = TElse
 	case Elif:
-		lex.Token = TElif
+		lex.token = TElif
 	case For:
-		lex.Token = TFor
+		lex.token = TFor
 	case Detach:
-		lex.Token = TDetach
+		lex.token = TDetach
 	case Nil:
-		lex.Token = TTypeName
+		lex.token = TTypeName
 	// Types
 	case Gear:
-		lex.Token = TTypeName
+		lex.token = TTypeName
 	case Tensor:
-		lex.Token = TTypeName
+		lex.token = TTypeName
 	case State:
-		lex.Token = TTypeName
+		lex.token = TTypeName
 	case Monodrone:
-		lex.Token = TTypeName
+		lex.token = TTypeName
 	case Omnidrone:
-		lex.Token = TTypeName
+		lex.token = TTypeName
 	// Built-in functions
 	case Send:
-		lex.Token = TSend
+		lex.token = TSend
 	case Receive:
-		lex.Token = TReceive
+		lex.token = TReceive
 	default:
-		lex.Token = TId
+		lex.token = TId
 	}
 
 	return nil
@@ -297,7 +297,7 @@ func (lex *Lexical) alphabeticalCharacter() error {
 func (lex *Lexical) numericalCharacter() error {
 	var err error
 	sbLexeme := strings.Builder{}
-	sbLexeme.WriteRune(lex.LookAhead)
+	sbLexeme.WriteRune(lex.lookAhead)
 	err = lex.MoveLookAhead()
 
 	if err != nil {
@@ -306,23 +306,23 @@ func (lex *Lexical) numericalCharacter() error {
 
 	floatSeparatorFound := false
 
-	for (lex.LookAhead >= '0' && lex.LookAhead <= '9') || (lex.LookAhead >= '.' && !floatSeparatorFound) {
-		if lex.LookAhead == '.' {
+	for (lex.lookAhead >= '0' && lex.lookAhead <= '9') || (lex.lookAhead >= '.' && !floatSeparatorFound) {
+		if lex.lookAhead == '.' {
 			floatSeparatorFound = true
 		}
-		sbLexeme.WriteRune(lex.LookAhead)
+		sbLexeme.WriteRune(lex.lookAhead)
 		err = lex.MoveLookAhead()
 		if err != nil {
 			return err
 		}
 	}
 
-	lex.Lexeme = sbLexeme.String()
+	lex.lexeme = sbLexeme.String()
 
 	if !floatSeparatorFound {
-		lex.Token = TGear
+		lex.token = TGear
 	} else {
-		lex.Token = TTensor
+		lex.token = TTensor
 	}
 
 	return err
@@ -336,8 +336,8 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 
 	uniqueSymbol := false
 
-	if checkMultiSymbolMatch(temp, lex.LookAhead) {
-		sbLexeme.WriteRune(lex.LookAhead)
+	if checkMultiSymbolMatch(temp, lex.lookAhead) {
+		sbLexeme.WriteRune(lex.lookAhead)
 		err = lex.MoveLookAhead()
 
 		if err != nil {
@@ -345,36 +345,36 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 		}
 	}
 
-	lex.Lexeme = sbLexeme.String()
+	lex.lexeme = sbLexeme.String()
 
-	switch lex.Lexeme {
+	switch lex.lexeme {
 	// Construction tokens
 	case SingleLineComment:
-		lex.Token = TSingleLineComment
+		lex.token = TSingleLineComment
 		// The lexical analyzer can jump to the next line because anything to the right of the single line comment
 		// symbol, "//", should be ignored
 		err = lex.nextLine()
 	case OpenMultilineComment:
-		lex.Token = TOpenMultilineComment
-		lex.CommentBlock = true
+		lex.token = TOpenMultilineComment
+		lex.commentBlock = true
 	case CloseMultilineComment:
-		lex.Token = TCloseMultilineComment
-		lex.CommentBlock = false
+		lex.token = TCloseMultilineComment
+		lex.commentBlock = false
 	// Conditional and repetition tokens
 	case GreaterEqualOperator:
-		lex.Token = TGreaterEqualOperator
+		lex.token = TGreaterEqualOperator
 	case LessEqualOperator:
-		lex.Token = TLessEqualOperator
+		lex.token = TLessEqualOperator
 	case EqualOperator:
-		lex.Token = TEqualOperator
+		lex.token = TEqualOperator
 	case NotEqualOperator:
-		lex.Token = TNotEqualOperator
+		lex.token = TNotEqualOperator
 	case AndOperator:
-		lex.Token = TAndOperator
+		lex.token = TAndOperator
 	case OrOperator:
-		lex.Token = TOrOperator
+		lex.token = TOrOperator
 	case DeclarationOperator:
-		lex.Token = TDeclarationOperator
+		lex.token = TDeclarationOperator
 	default:
 		lex.uniqueSymbolCharacter(temp)
 		uniqueSymbol = true
@@ -385,7 +385,7 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 	}
 
 	if uniqueSymbol {
-		lex.Lexeme = sbLexeme.String()
+		lex.lexeme = sbLexeme.String()
 	}
 
 	return err
@@ -430,65 +430,65 @@ func (lex *Lexical) uniqueSymbolCharacter(temp rune) {
 	switch temp {
 	// Construction tokens
 	case Comma:
-		lex.Token = TComma
+		lex.token = TComma
 	case Colon:
-		lex.Token = TColon
+		lex.token = TColon
 	// Structure tokens
 	case OpenParentheses:
-		lex.Token = TOpenParentheses
+		lex.token = TOpenParentheses
 	case CloseParentheses:
-		lex.Token = TCloseParentheses
+		lex.token = TCloseParentheses
 	case OpenBraces:
-		lex.Token = TOpenBraces
+		lex.token = TOpenBraces
 	case CloseBraces:
-		lex.Token = TCloseBraces
+		lex.token = TCloseBraces
 	// Operators
 	case GreaterThanOperator:
-		lex.Token = TGreaterThanOperator
+		lex.token = TGreaterThanOperator
 	case LessThanOperator:
-		lex.Token = TLessThanOperator
+		lex.token = TLessThanOperator
 	case AdditionOperator:
-		lex.Token = TAdditionOperator
+		lex.token = TAdditionOperator
 	case SubtractionOperator:
-		lex.Token = TSubtractionOperator
+		lex.token = TSubtractionOperator
 	case MultiplicationOperator:
-		lex.Token = TMultiplicationOperator
+		lex.token = TMultiplicationOperator
 	case DivisionOperator:
-		lex.Token = TDivisionOperator
+		lex.token = TDivisionOperator
 	case ModuleOperator:
-		lex.Token = TModuleOperator
+		lex.token = TModuleOperator
 	case NotOperator:
-		lex.Token = TNotOperator
+		lex.token = TNotOperator
 	case AttributionOperator:
-		lex.Token = TAttributionOperator
+		lex.token = TAttributionOperator
 	default:
-		lex.Token = TLexError
-		lex.ErrorMessage = fmt.Sprintf("Lexical error on line: %d\nRecognized upon reaching column: %d\nError line: <%s>\nUnknown token: %c", lex.CurrentLine, lex.CurrentColumn, lex.InputLine, lex.LookAhead)
+		lex.token = TLexError
+		lex.errorMessage = fmt.Sprintf("Lexical error on line: %d\nRecognized upon reaching column: %d\nError line: <%s>\nUnknown token: %c", lex.currentLine, lex.currentColumn, lex.inputLine, lex.lookAhead)
 	}
-	lex.Lexeme = sbLexeme.String()
+	lex.lexeme = sbLexeme.String()
 }
 
 // Handles string literals, either single or double-quoted.
 func (lex *Lexical) quoteCharacters() error {
 	var err error
 	charCount := 0
-	char := lex.LookAhead
+	char := lex.lookAhead
 	if char == '\'' {
 		charCount = 1
 	}
 	sbLexeme := strings.Builder{}
-	sbLexeme.WriteRune(lex.LookAhead)
+	sbLexeme.WriteRune(lex.lookAhead)
 	err = lex.MoveLookAhead()
 
 	if err != nil {
 		return err
 	}
 
-	for lex.LookAhead != char {
+	for lex.lookAhead != char {
 		if char == '\'' && charCount > 1 {
 			return fmt.Errorf(custom_errors2.InvalidMonodrone)
 		}
-		sbLexeme.WriteRune(lex.LookAhead)
+		sbLexeme.WriteRune(lex.lookAhead)
 		err = lex.MoveLookAhead()
 
 		if err != nil {
@@ -498,14 +498,14 @@ func (lex *Lexical) quoteCharacters() error {
 		charCount++
 	}
 
-	sbLexeme.WriteRune(lex.LookAhead)
+	sbLexeme.WriteRune(lex.lookAhead)
 	err = lex.MoveLookAhead()
-	lex.Lexeme = sbLexeme.String()
+	lex.lexeme = sbLexeme.String()
 	switch char {
 	case DoubleQuote:
-		lex.Token = TDoubleQuote
+		lex.token = TDoubleQuote
 	case SingleQuote:
-		lex.Token = TSingleQuote
+		lex.token = TSingleQuote
 	}
 	return err
 }
@@ -516,24 +516,24 @@ func (lex *Lexical) quoteCharacters() error {
 // Displays the current token and lexeme to the output.
 func (lex *Lexical) DisplayToken() {
 	var tokenLexeme string
-	lex.Lexeme = reverse(lex.Lexeme)
+	lex.lexeme = reverse(lex.lexeme)
 
-	if lex.Token >= TConstruct && lex.Token < TIf {
+	if lex.token >= TConstruct && lex.token < TIf {
 		tokenLexeme = lex.displayConstructionToken()
-	} else if lex.Token >= TIf && lex.Token < TOpenParentheses {
+	} else if lex.token >= TIf && lex.token < TOpenParentheses {
 		tokenLexeme = lex.displayConditionalRepetitionToken()
-	} else if lex.Token >= TOpenParentheses && lex.Token < TGreaterThanOperator {
+	} else if lex.token >= TOpenParentheses && lex.token < TGreaterThanOperator {
 		tokenLexeme = lex.displayStructureToken()
-	} else if lex.Token >= TGreaterThanOperator && lex.Token <= TNil {
+	} else if lex.token >= TGreaterThanOperator && lex.token <= TNil {
 		tokenLexeme = lex.displayOperatorToken()
-	} else if lex.Token >= TNil && lex.Token < TSend {
+	} else if lex.token >= TNil && lex.token < TSend {
 		tokenLexeme = lex.displayTypeToken()
 	} else {
 		tokenLexeme = lex.displayFunctions()
 	}
 
-	fmt.Println(tokenLexeme + " ( " + lex.Lexeme + " )")
-	lex.storeTokens(tokenLexeme + " ( " + lex.Lexeme + " )")
+	fmt.Println(tokenLexeme + " ( " + lex.lexeme + " )")
+	lex.storeTokens(tokenLexeme + " ( " + lex.lexeme + " )")
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -550,7 +550,7 @@ func reverse(s string) string {
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (lex *Lexical) displayConstructionToken() string {
-	switch lex.Token {
+	switch lex.token {
 	// Construction tokens
 	case TConstruct:
 		return OutputConstruct
@@ -573,7 +573,7 @@ func (lex *Lexical) displayConstructionToken() string {
 
 func (lex *Lexical) displayConditionalRepetitionToken() string {
 	// Conditional and repetition
-	switch lex.Token {
+	switch lex.token {
 	case TIf:
 		return OutputIf
 	case TElse:
@@ -590,7 +590,7 @@ func (lex *Lexical) displayConditionalRepetitionToken() string {
 }
 
 func (lex *Lexical) displayTypeToken() string {
-	switch lex.Token {
+	switch lex.token {
 	// Type
 	case TNil:
 		return OutputNil
@@ -614,7 +614,7 @@ func (lex *Lexical) displayTypeToken() string {
 }
 
 func (lex *Lexical) displayStructureToken() string {
-	switch lex.Token {
+	switch lex.token {
 	// Structure
 	case TOpenParentheses:
 		return OutputOpenParentheses
@@ -636,7 +636,7 @@ func (lex *Lexical) displayStructureToken() string {
 }
 
 func (lex *Lexical) displayOperatorToken() string {
-	switch lex.Token {
+	switch lex.token {
 	// Operators
 	case TGreaterThanOperator:
 		return OutputGreaterThanOperator
@@ -676,7 +676,7 @@ func (lex *Lexical) displayOperatorToken() string {
 }
 
 func (lex *Lexical) displayFunctions() string {
-	switch lex.Token {
+	switch lex.token {
 	// Built-in functions
 	case TSend:
 		return OutputSend
@@ -696,13 +696,13 @@ func (lex *Lexical) Close(file string) {
 
 	switch file {
 	case "input":
-		err := lex.InputFile.Close()
+		err := lex.inputFile.Close()
 		if err != nil {
 			custom_errors2.Log(custom_errors2.FileCloseError, &err, custom_errors2.ErrorLevel)
 			return
 		}
 	case "output":
-		err := lex.OutputFile.Close()
+		err := lex.outputFile.Close()
 		if err != nil {
 			custom_errors2.Log(custom_errors2.FileCloseError, &err, custom_errors2.ErrorLevel)
 			return
@@ -715,7 +715,7 @@ func (lex *Lexical) Close(file string) {
 // WriteOutput :
 // Writes the identified tokens to the output file.
 func (lex *Lexical) WriteOutput() error {
-	if lex.OutputFile == nil {
+	if lex.outputFile == nil {
 
 		return fmt.Errorf(custom_errors2.UninitializedFile)
 	}
@@ -725,7 +725,7 @@ func (lex *Lexical) WriteOutput() error {
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(lex.IdentifiedTokens.String())
+	_, err = file.WriteString(lex.identifiedTokens.String())
 	if err != nil {
 		return err
 	}
@@ -738,11 +738,11 @@ func (lex *Lexical) WriteOutput() error {
 // Displays the list of identified tokens.
 func (lex *Lexical) ShowTokens() {
 	custom_errors2.Log(custom_errors2.IdentifiedTokens, nil, custom_errors2.SuccessLevel)
-	fmt.Println(lex.IdentifiedTokens.String())
+	fmt.Println(lex.identifiedTokens.String())
 }
 
-// Stores an identified token into the IdentifiedTokens builder.
+// Stores an identified token into the identifiedTokens builder.
 func (lex *Lexical) storeTokens(identifiedToken string) {
-	lex.IdentifiedTokens.WriteString(identifiedToken)
-	lex.IdentifiedTokens.WriteString("\n")
+	lex.identifiedTokens.WriteString(identifiedToken)
+	lex.identifiedTokens.WriteString("\n")
 }

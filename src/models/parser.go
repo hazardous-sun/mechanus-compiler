@@ -34,7 +34,7 @@ func (p *Parser) Run() {
 		return
 	}
 
-	for lex.Token != TInputEnd && lex.Token != TLexError {
+	for lex.token != TInputEnd && lex.token != TLexError {
 		err = lex.NextToken()
 
 		if !comment(&lex) {
@@ -46,8 +46,8 @@ func (p *Parser) Run() {
 		}
 	}
 
-	if lex.Token == TLexError {
-		err = errors.New(lex.ErrorMessage)
+	if lex.token == TLexError {
+		err = errors.New(lex.errorMessage)
 		custom_errors.Log(custom_errors.LexicalError, &err, custom_errors.ErrorLevel)
 	} else {
 		custom_errors.Log(custom_errors.LexicalSuccess, nil, custom_errors.SuccessLevel)
@@ -59,8 +59,8 @@ func (p *Parser) Run() {
 }
 
 func comment(lex *Lexical) bool {
-	return lex.Token == TSingleLineComment ||
-		lex.Token == TOpenMultilineComment ||
-		lex.Token == TCloseMultilineComment ||
-		lex.CommentBlock == true
+	return lex.token == TSingleLineComment ||
+		lex.token == TOpenMultilineComment ||
+		lex.token == TCloseMultilineComment ||
+		lex.commentBlock == true
 }
