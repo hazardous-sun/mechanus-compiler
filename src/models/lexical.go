@@ -56,8 +56,7 @@ func NewLexical(inputFile, outputFile *os.File) (Lexical, error) {
 	}
 
 	// Collects the first lexeme
-	//err = lex.moveLookAhead()
-
+	err = lex.moveLookAhead()
 	return lex, nil
 }
 
@@ -73,14 +72,17 @@ func (lex *Lexical) readLines() error {
 
 	err := scanner.Err()
 
-	if err == nil {
-		lex.currentLine = len(lex.lines) - 1
-		lex.inputLine = lex.lines[lex.currentLine]
-		lex.currentColumn = len(lex.inputLine)
-		lex.pointer = lex.currentColumn
+	if err != nil {
+		err = log.EnrichError(err, "readLines()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
 	}
 
-	return fmt.Errorf(fmt.Sprintf("readLines(): %v", err))
+	lex.currentLine = len(lex.lines) - 1
+	lex.inputLine = lex.lines[lex.currentLine]
+	lex.currentColumn = len(lex.inputLine)
+	lex.pointer = lex.currentColumn
+	return nil
 }
 
 // Moves the pointer to the next character in the current line. If the end of the line is reached, it loads the next
