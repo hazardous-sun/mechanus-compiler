@@ -159,22 +159,28 @@ func (lex *Lexical) nextLine() error {
 // Advances the lexer to the next token, checking for separators, alphabetical characters, numerical characters, string
 // literals, or symbols.
 func (lex *Lexical) NextToken() error {
-	var err error
 	// Check if lex.lookAhead is inside a comment block
 	if lex.commentBlock {
-		err = lex.skipComment()
+		err := lex.skipComment()
+
+		if err != nil {
+			err = log.EnrichError(err, "Lexical.NextToken()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return err
+		}
 	} else {
 		for lex.isSeparatorCharacter() {
-			err = lex.moveLookAhead()
+			err := lex.moveLookAhead()
+
 			if err != nil {
+				err = log.EnrichError(err, "Lexical.NextToken()")
+				log.Log(err.Error(), log.InfoLevel)
 				return err
 			}
 		}
 	}
 
-	if err != nil {
-		return err
-	}
+	var err error
 
 	if lex.isAlphabeticalCharacter() {
 		err = lex.alphabeticalCharacter()
@@ -185,20 +191,35 @@ func (lex *Lexical) NextToken() error {
 	} else {
 		err = lex.symbolCharacter()
 	}
-	return err
+
+	if err != nil {
+		err = log.EnrichError(err, "Lexical.NextToken()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	return nil
 }
 
 // Handles symbols like operators, delimiters, and comments.
 func (lex *Lexical) symbolCharacter() error {
 	temp := lex.lookAhead
 	err := lex.moveLookAhead()
+
 	if err != nil {
+		err = log.EnrichError(err, "Lexical.symbolCharacter()")
+		log.Log(err.Error(), log.ErrorLevel)
 		return err
 	}
+
 	err = lex.multiSymbolCharacter(temp)
+
 	if err != nil {
+		err = log.EnrichError(err, "Lexical.symbolCharacter()")
+		log.Log(err.Error(), log.ErrorLevel)
 		return err
 	}
+
 	return nil
 }
 
@@ -206,7 +227,10 @@ func (lex *Lexical) symbolCharacter() error {
 func (lex *Lexical) skipComment() error {
 	for !lex.multilineCommentEnd() {
 		err := lex.moveLookAhead()
+
 		if err != nil {
+			err = log.EnrichError(err, "Lexical.skipComment()")
+			log.Log(err.Error(), log.ErrorLevel)
 			return err
 		}
 	}
@@ -292,6 +316,8 @@ func (lex *Lexical) alphabeticalCharacter() error {
 		sbLexeme.WriteRune(lex.lookAhead)
 		err := lex.moveLookAhead()
 		if err != nil {
+			err = log.EnrichError(err, "Lexical.alphabeticalCharacter()")
+			log.Log(err.Error(), log.ErrorLevel)
 			return err
 		}
 	}
@@ -344,12 +370,13 @@ func (lex *Lexical) alphabeticalCharacter() error {
 
 // Processes numerical characters and determines the type (Gear or Tensor).
 func (lex *Lexical) numericalCharacter() error {
-	var err error
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.lookAhead)
-	err = lex.moveLookAhead()
+	err := lex.moveLookAhead()
 
 	if err != nil {
+		err = log.EnrichError(err, "Lexical.numericalCharacter()")
+		log.Log(err.Error(), log.ErrorLevel)
 		return err
 	}
 
@@ -362,6 +389,8 @@ func (lex *Lexical) numericalCharacter() error {
 		sbLexeme.WriteRune(lex.lookAhead)
 		err = lex.moveLookAhead()
 		if err != nil {
+			err = log.EnrichError(err, "Lexical.numericalCharacter()")
+			log.Log(err.Error(), log.ErrorLevel)
 			return err
 		}
 	}
@@ -374,7 +403,7 @@ func (lex *Lexical) numericalCharacter() error {
 		lex.token = TTensor
 	}
 
-	return err
+	return nil
 }
 
 // Handles multi-character symbols like operators and comments.
@@ -390,6 +419,8 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 		err = lex.moveLookAhead()
 
 		if err != nil {
+			err = log.EnrichError(err, "Lexical.multiSymbolCharacter()")
+			log.Log(err.Error(), log.ErrorLevel)
 			return err
 		}
 	}
@@ -430,6 +461,8 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 	}
 
 	if err != nil {
+		err = log.EnrichError(err, "Lexical.multiSymbolCharacter()")
+		log.Log(err.Error(), log.ErrorLevel)
 		return err
 	}
 
@@ -437,7 +470,7 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 		lex.lexeme = sbLexeme.String()
 	}
 
-	return err
+	return nil
 }
 
 func checkMultiSymbolMatch(char1, char2 rune) bool {
@@ -519,7 +552,6 @@ func (lex *Lexical) uniqueSymbolCharacter(temp rune) {
 
 // Handles string literals, either single or double-quoted.
 func (lex *Lexical) quoteCharacters() error {
-	var err error
 	charCount := 0
 	char := lex.lookAhead
 	if char == '\'' {
@@ -527,9 +559,11 @@ func (lex *Lexical) quoteCharacters() error {
 	}
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.lookAhead)
-	err = lex.moveLookAhead()
+	err := lex.moveLookAhead()
 
 	if err != nil {
+		err = log.EnrichError(err, "Lexical.quoteCharacters()")
+		log.Log(err.Error(), log.ErrorLevel)
 		return err
 	}
 
@@ -541,6 +575,8 @@ func (lex *Lexical) quoteCharacters() error {
 		err = lex.moveLookAhead()
 
 		if err != nil {
+			err = log.EnrichError(err, "Lexical.quoteCharacters()")
+			log.Log(err.Error(), log.ErrorLevel)
 			return err
 		}
 
@@ -556,7 +592,7 @@ func (lex *Lexical) quoteCharacters() error {
 	case SingleQuote:
 		lex.token = TSingleQuote
 	}
-	return err
+	return nil
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -746,6 +782,7 @@ func (lex *Lexical) Close(file string) {
 	switch file {
 	case "input":
 		err := lex.inputFile.Close()
+
 		if err != nil {
 			err = log.EnrichError(err, "Lexical.Close()")
 			log.Log(err.Error(), log.ErrorLevel)
@@ -753,6 +790,7 @@ func (lex *Lexical) Close(file string) {
 		}
 	case "output":
 		err := lex.outputFile.Close()
+
 		if err != nil {
 			err = log.EnrichError(err, "Lexical.Close()")
 			log.Log(err.Error(), log.ErrorLevel)
@@ -770,14 +808,28 @@ func (lex *Lexical) WriteOutput() error {
 
 		return fmt.Errorf(log.UninitializedFile)
 	}
+
 	file, err := os.Create("output.txt")
+
 	if err != nil {
+		err = log.EnrichError(err, "WriteOutput()")
+		log.Log(err.Error(), log.ErrorLevel)
 		return err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			err = log.EnrichError(err, "WriteOutput()")
+			log.Log(err.Error(), log.ErrorLevel)
+			return
+		}
+	}(file)
 
 	_, err = file.WriteString(lex.identifiedTokens.String())
+
 	if err != nil {
+		err = log.EnrichError(err, "WriteOutput()")
+		log.Log(err.Error(), log.ErrorLevel)
 		return err
 	}
 
