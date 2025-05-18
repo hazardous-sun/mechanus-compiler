@@ -17,7 +17,7 @@ type Parser struct {
 }
 
 func (p *Parser) Run() {
-	// Initialize input and Output files insde Lexical
+	// Initialize Lexical
 	lex, err := NewLexical(p.Source, p.Output)
 
 	if err != nil {
