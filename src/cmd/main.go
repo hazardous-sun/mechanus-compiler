@@ -28,10 +28,7 @@ func main() {
 	}()
 
 	// Initialize the parser
-	parser := models.Parser{
-		Source: sourceFile,
-		Output: outputFile,
-	}
+	parser, err := models.NewParser(sourceFile, outputFile)
 
 	// Start the syntax analysis
 	parser.Run()

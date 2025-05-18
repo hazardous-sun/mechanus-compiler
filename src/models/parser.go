@@ -4,33 +4,42 @@ import (
 	"fmt"
 	log "mechanus-compiler/src/error"
 	"os"
-	"strconv"
 )
 
 // Parser :
-// This is the structure responsible for analyzing the syntax of the Source file. It interacts directly with the lexical
+// This is the structure responsible for analyzing the syntax of the source file. It interacts directly with the lexical
 // analyzer and checks recursively for invalid tokens.
 type Parser struct {
-	Source       *os.File
-	Output       *os.File
-	SyntaxError  bool
-	LexicalError bool
+	source  *os.File
+	output  *os.File
+	lexical Lexical
 }
 
-func (p *Parser) Run() {
+// NewParser :
+// Initializes a new instance of Parser with the provided input and output files.
+//
+// Fails if it is not possible to read the source file, or if the Lexical initialization fails.
+func NewParser(source, output *os.File) (Parser, error) {
 	// Initialize Lexical
-	lex, err := NewLexical(p.Source, p.Output)
+	lex, err := NewLexical(source, output)
 
 	// Check for errors during Lexical initialization
 	if err != nil {
-		err = log.EnrichError(err, "Parser.Run()")
+		err = log.EnrichError(err, "NewParser()")
 		log.Log(err.Error(), log.ErrorLevel)
-		return
+		return Parser{}, err
 	}
 
-	for lex.WIP() {
-		lexeme, err := lex.NextToken()
-		log.Log(strconv.Itoa(lexeme), log.WarningLevel)
+	return Parser{
+		source:  source,
+		output:  output,
+		lexical: lex,
+	}, nil
+}
+
+func (p *Parser) Run() error {
+	for p.lexical.WIP() {
+		_, err := p.lexical.NextToken()
 
 		if err != nil {
 			break
@@ -38,13 +47,19 @@ func (p *Parser) Run() {
 	}
 
 	// Check if Lexical failed to reach EOF
-	if lex.Fail() {
-		err = fmt.Errorf("%s -> %s", log.LexicalError, lex.errorMessage)
+	if p.lexical.Fail() {
+		err := fmt.Errorf("%s -> %s", log.LexicalError, p.lexical.errorMessage)
 		log.Log(err.Error(), log.ErrorLevel)
 	}
 
 	log.Log(log.LexicalSuccess, log.SuccessLevel)
-	err = lex.WriteOutput()
+	err := p.lexical.WriteOutput()
 
-	return
+	if err != nil {
+		err = log.EnrichError(err, "Parser.Run()")
+		log.Log(err.Error(), log.ErrorLevel)
+		return err
+	}
+
+	return nil
 }
