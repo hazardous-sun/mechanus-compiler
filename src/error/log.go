@@ -20,6 +20,8 @@ const (
 	successColor = "\033[32m"
 )
 
+// Log :
+// Logs a message to stdout.
 func Log(message string, err *error, level string) {
 	switch level {
 	case InfoLevel:
@@ -33,4 +35,10 @@ func Log(message string, err *error, level string) {
 	default:
 		log.Println("invalid log level")
 	}
+}
+
+// EnrichError :
+// Enriches an error with extra context.
+func EnrichError(err error, msg string) error {
+	return fmt.Errorf(fmt.Sprintf("%s: %v", msg, err))
 }
