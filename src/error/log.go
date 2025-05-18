@@ -40,5 +40,5 @@ func Log(message string, level string) {
 // EnrichError :
 // Enriches an error with extra context.
 func EnrichError(err error, msg string) error {
-	return fmt.Errorf("%s: %v", msg, err)
+	return fmt.Errorf("%s: %w", msg, err)
 }
