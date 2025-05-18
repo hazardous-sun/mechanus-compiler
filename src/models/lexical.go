@@ -201,6 +201,12 @@ func (lex *Lexical) NextToken() error {
 	return nil
 }
 
+// WIP :
+// Checks if Lexical should keep working.
+func (lex *Lexical) WIP() bool {
+	return lex.token != TInputEnd && lex.token != TLexError
+}
+
 // Handles symbols like operators, delimiters, and comments.
 func (lex *Lexical) symbolCharacter() error {
 	temp := lex.lookAhead

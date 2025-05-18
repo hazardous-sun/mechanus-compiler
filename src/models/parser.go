@@ -26,7 +26,7 @@ func (p *Parser) Run() {
 		return
 	}
 
-	for lex.token != TInputEnd && lex.token != TLexError {
+	for lex.WIP() {
 		err = lex.NextToken()
 
 		if !comment(&lex) {
