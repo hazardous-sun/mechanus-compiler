@@ -12,6 +12,7 @@ import (
 // This is the structure responsible for making the lexical analysis of the source file. It checks for unrecognized
 // lexemes and, if it finds one, it returns an error code.
 type Lexical struct {
+	debug            bool
 	inputFile        *os.File
 	lines            []string
 	outputFile       *os.File
@@ -36,9 +37,10 @@ type Lexical struct {
 // for the lexer.
 //
 // Fails if it is not possible to read the source file.
-func NewLexical(inputFile, outputFile *os.File) (Lexical, error) {
+func NewLexical(inputFile, outputFile *os.File, debug bool) (Lexical, error) {
 	// Initialize the structure
 	lex := Lexical{
+		debug:         debug,
 		inputFile:     inputFile,
 		outputFile:    outputFile,
 		lines:         make([]string, 0),
@@ -52,14 +54,14 @@ func NewLexical(inputFile, outputFile *os.File) (Lexical, error) {
 
 	// Read the source file
 	if err := lex.readLines(); err != nil {
-		err = log.FileErrorf("(NewLexical) -> %w", err)
+		err = log.FileErrorf("NewLexical", err)
 		log.LogError(err)
 		return Lexical{}, err
 	}
 
 	// Collect the first lexeme
 	if err := lex.moveLookAhead(); err != nil {
-		err = log.FileErrorf("(NewLexical) -> %w", err)
+		err = log.FileErrorf("NewLexical", err)
 		log.LogError(err)
 		return Lexical{}, err
 	}
@@ -71,7 +73,7 @@ func NewLexical(inputFile, outputFile *os.File) (Lexical, error) {
 // Advances the lexer to the next token, checking for separators, alphabetical characters, numerical characters, string
 // literals, or symbols.
 func (lex *Lexical) NextToken() (int, error) {
-	errSalt := "(Lexical.NextToken) -> %s"
+	errSalt := "Lexical.NextToken"
 
 	// Check if lex.lookAhead is inside a comment block
 	if lex.commentBlock {
@@ -84,7 +86,6 @@ func (lex *Lexical) NextToken() (int, error) {
 		for lex.isSeparatorCharacter() {
 			if err := lex.moveLookAhead(); err != nil {
 				err = log.LexicalErrorf(errSalt, err)
-				log.LogError(err)
 				return -1, err
 			}
 		}
@@ -103,7 +104,7 @@ func (lex *Lexical) NextToken() (int, error) {
 	}
 
 	if err != nil {
-		err = log.LexicalErrorf("(Lexical.NextToken) -> %w", err)
+		err = log.LexicalErrorf("Lexical.NextToken", err)
 		log.LogError(err)
 		return -1, err
 	}
@@ -154,18 +155,20 @@ func (lex *Lexical) GetPos() []int {
 // Close :
 // Closes the specified file (either input or output).
 func (lex *Lexical) Close(file string) {
-	log.LogInfo(fmt.Sprintf("closing %s file", file))
+	if lex.debug {
+		log.LogDebug(fmt.Sprintf("closing %s file", file))
+	}
 
 	switch file {
 	case "input":
 		if err := lex.inputFile.Close(); err != nil {
-			err = log.FileErrorf("(Lexical.Close) -> %w", err)
+			err = log.FileErrorf("Lexical.Close", err)
 			log.LogError(err)
 			return
 		}
 	case "output":
 		if err := lex.outputFile.Close(); err != nil {
-			err = log.FileErrorf("(Lexical.Close) -> %w", err)
+			err = log.FileErrorf("Lexical.Close", err)
 			log.LogError(err)
 			return
 		}
@@ -186,10 +189,10 @@ func (lex *Lexical) Fail() error {
 // WriteOutput :
 // Writes the identified tokens to the output file.
 func (lex *Lexical) WriteOutput() error {
-	errSalt := "(Lexical.WriteOutput) -> %s"
+	errSalt := "(Lexical.WriteOutput)"
 
 	if lex.outputFile == nil {
-		err := log.FileErrorf(errSalt, log.UninitializedFile)
+		err := log.FileErrorf(errSalt, fmt.Errorf(log.UninitializedFile))
 		log.LogError(err)
 		return err
 	}
@@ -222,7 +225,9 @@ func (lex *Lexical) WriteOutput() error {
 // ShowTokens :
 // Displays the list of identified tokens.
 func (lex *Lexical) ShowTokens() {
-	log.LogInfo(log.IdentifiedTokens)
+	if lex.debug {
+		log.LogDebug(log.IdentifiedTokens)
+	}
 	fmt.Println(lex.identifiedTokens.String())
 }
 
@@ -243,13 +248,13 @@ func (lex *Lexical) readLines() error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		err = log.FileErrorf("(Lexical.readLines) -> %w", err)
+		err = log.FileErrorf("Lexical.readLines", err)
 		log.LogError(err)
 		return err
 	}
 
 	if len(lex.lines) == 0 {
-		err := log.FileErrorf("(Lexical.readLines) -> %s", log.EmptyFile)
+		err := log.FileErrorf("Lexical.readLines", fmt.Errorf(log.EmptyFile))
 		log.LogError(err)
 		return err
 	}
@@ -276,7 +281,7 @@ func (lex *Lexical) moveLookAhead() error {
 
 		// Check if EOF was reached
 		if err != nil {
-			err = log.FileErrorf("(Lexical.moveLookAhead) -> %w", err)
+			err = log.FileErrorf("Lexical.moveLookAhead", err)
 			return err
 		}
 
@@ -306,8 +311,10 @@ func (lex *Lexical) nextLine() error {
 
 	// Check if the top of the file was reached
 	if lex.currentLine <= 0 {
-		log.LogInfo(log.EndOfFileReached)
-		return log.FileError(log.EndOfFileReached)
+		if lex.debug {
+			log.LogDebug(log.EndOfFileReached)
+		}
+		return log.FileError(fmt.Errorf(log.EndOfFileReached))
 	}
 
 	// Collect the content of the line
@@ -320,7 +327,7 @@ func (lex *Lexical) nextLine() error {
 func (lex *Lexical) skipComment() error {
 	for !lex.multilineCommentEnd() {
 		if err := lex.moveLookAhead(); err != nil {
-			err = log.LexicalErrorf("(Lexical.skipComment) -> %w", err)
+			err = log.LexicalErrorf("Lexical.skipComment", err)
 			log.LogError(err)
 			return err
 		}
@@ -415,7 +422,7 @@ func (lex *Lexical) alphabeticalCharacter() error {
 	for (lex.lookAhead >= 'A' && lex.lookAhead <= 'Z') || (lex.lookAhead >= 'a' && lex.lookAhead <= 'z') || (lex.lookAhead >= '0' && lex.lookAhead <= '9') || lex.lookAhead == '_' {
 		sbLexeme.WriteRune(lex.lookAhead)
 		if err := lex.moveLookAhead(); err != nil {
-			err = log.LexicalErrorf("(Lexical.alphabeticalCharacter) -> %w", err)
+			err = log.LexicalErrorf("Lexical.alphabeticalCharacter", err)
 			log.LogError(err)
 			return err
 		}
@@ -473,7 +480,7 @@ func (lex *Lexical) numericalCharacter() error {
 	sbLexeme.WriteRune(lex.lookAhead)
 
 	if err := lex.moveLookAhead(); err != nil {
-		err = log.LexicalErrorf("(Lexical.numericalCharacter) -> %w", err)
+		err = log.LexicalErrorf("Lexical.numericalCharacter", err)
 		log.LogError(err)
 		return err
 	}
@@ -488,7 +495,7 @@ func (lex *Lexical) numericalCharacter() error {
 		sbLexeme.WriteRune(lex.lookAhead)
 
 		if err := lex.moveLookAhead(); err != nil {
-			err = log.LexicalErrorf("(Lexical.numericalCharacter) -> %w", err)
+			err = log.LexicalErrorf("Lexical.numericalCharacter", err)
 			log.LogError(err)
 			return err
 		}
@@ -510,13 +517,13 @@ func (lex *Lexical) symbolCharacter() error {
 	temp := lex.lookAhead
 
 	if err := lex.moveLookAhead(); err != nil {
-		err = log.LexicalErrorf("(Lexical.symbolCharacter) -> %w", err)
+		err = log.LexicalErrorf("Lexical.symbolCharacter", err)
 		log.LogError(err)
 		return err
 	}
 
 	if err := lex.multiSymbolCharacter(temp); err != nil {
-		err = log.LexicalErrorf("(Lexical.symbolCharacter) -> %w", err)
+		err = log.LexicalErrorf("Lexical.symbolCharacter", err)
 		log.LogError(err)
 		return err
 	}
@@ -535,7 +542,7 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 		sbLexeme.WriteRune(lex.lookAhead)
 
 		if err := lex.moveLookAhead(); err != nil {
-			err = log.LexicalErrorf("(Lexical.multiSymbolCharacter) -> %w", err)
+			err = log.LexicalErrorf("Lexical.multiSymbolCharacter", err)
 			log.LogError(err)
 			return err
 		}
@@ -578,7 +585,7 @@ func (lex *Lexical) multiSymbolCharacter(temp rune) error {
 	}
 
 	if err != nil {
-		err = log.LexicalErrorf("(Lexical.multiSymbolCharacter) -> %w", err)
+		err = log.LexicalErrorf("Lexical.multiSymbolCharacter", err)
 		log.LogError(err)
 		return err
 	}
@@ -676,7 +683,7 @@ func (lex *Lexical) quoteCharacters() error {
 	}
 	sbLexeme := strings.Builder{}
 	sbLexeme.WriteRune(lex.lookAhead)
-	errSalt := "(Lexical.quoteCharacters) -> %w"
+	errSalt := "(Lexical.quoteCharacters)"
 
 	if err := lex.moveLookAhead(); err != nil {
 		err = log.LexicalErrorf(errSalt, err)
@@ -703,7 +710,7 @@ func (lex *Lexical) quoteCharacters() error {
 	sbLexeme.WriteRune(lex.lookAhead)
 
 	if err := lex.moveLookAhead(); err != nil {
-		err = log.LexicalErrorf("(Lexical.quoteCharacters) -> %w", err)
+		err = log.LexicalErrorf("Lexical.quoteCharacters", err)
 		log.LogError(err)
 		return err
 	}

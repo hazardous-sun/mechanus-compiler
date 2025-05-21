@@ -10,6 +10,7 @@ import (
 // This is the structure responsible for analyzing the syntax of the source file. It interacts directly with the lexical
 // analyzer and checks recursively for invalid tokens.
 type Parser struct {
+	debug   bool
 	source  *os.File
 	output  *os.File
 	lexical Lexical
@@ -19,18 +20,19 @@ type Parser struct {
 // Initializes a new instance of Parser with the provided input and output files.
 //
 // Fails if it is not possible to read the source file, or if the Lexical initialization fails.
-func NewParser(source, output *os.File) (Parser, error) {
+func NewParser(source, output *os.File, debug bool) (Parser, error) {
 	// Initialize Lexical
-	lex, err := NewLexical(source, output)
+	lex, err := NewLexical(source, output, debug)
 
 	// Check for errors during Lexical initialization
 	if err != nil {
-		err = log.SyntaxErrorf("(NewParser) -> %w", err)
+		err = log.SyntaxErrorf("NewParser", err)
 		log.LogError(err)
 		return Parser{}, err
 	}
 
 	return Parser{
+		debug:   debug,
 		source:  source,
 		output:  output,
 		lexical: lex,
@@ -50,7 +52,7 @@ func (p *Parser) Run() error {
 
 	// Check if Lexical failed to reach EOF
 	if err := p.lexical.Fail(); err != nil {
-		err = log.SyntaxErrorf("(Parser.Run) -> %w", err)
+		err = log.SyntaxErrorf("Parser.Run", err)
 		log.LogError(err)
 		return err
 	}
@@ -58,7 +60,7 @@ func (p *Parser) Run() error {
 	log.LogSuccess(log.LexicalSuccess)
 
 	if err := p.lexical.WriteOutput(); err != nil {
-		err = log.SyntaxErrorf("(Parser.Run) -> %w", err)
+		err = log.SyntaxErrorf("Parser.Run", err)
 		log.LogError(err)
 		return err
 	}
@@ -68,7 +70,7 @@ func (p *Parser) Run() error {
 
 func (p *Parser) parse() error {
 	if err := p.g(); err != nil {
-		err = log.SyntaxErrorf("(Parser.parse) -> %w", err)
+		err = log.SyntaxErrorf("Parser.parse", err)
 		log.LogError(err)
 		return err
 	}
@@ -78,7 +80,7 @@ func (p *Parser) parse() error {
 
 // <G> ::= '{' <BODY> '}' <TEXT_WITHOUT_NUMBERS> 'Construct'
 func (p *Parser) g() error {
-	errSalt := "(Parser.g) -> %w"
+	errSalt := "(Parser.g)"
 
 	// Check for TConstruct
 	if p.lexical.GetToken() != TConstruct {
@@ -129,10 +131,10 @@ func (p *Parser) g() error {
 		return err
 	}
 
-	_, err = p.lexical.NextToken()
-
-	if err != nil {
-		err = log.EnrichError(err, "Parser.g()")
+	if _, err = p.lexical.NextToken(); err != nil {
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
+		return err
 	}
 
 	// Check for Construct body
@@ -177,7 +179,7 @@ func (p *Parser) g() error {
 func (p *Parser) textWithoutNumbers() error {
 	if p.lexical.GetToken() != TId {
 		err := unexpectedLexeme(p, "ID")
-		err = log.SyntaxErrorf("(Parser.textWithoutNumbers) -> %w", err)
+		err = log.SyntaxErrorf("Parser.textWithoutNumbers", err)
 		log.LogError(err)
 		return err
 	}
@@ -203,5 +205,5 @@ func (p *Parser) bodyRest() error {
 
 // Helper methods
 func unexpectedLexeme(p *Parser, expectedLexeme string) error {
-	return log.SyntaxErrorf("%s: (%s) expected lexeme '%s', found '%s'", log.SyntaxError, p.lexical.DisplayPos(), expectedLexeme, p.lexical.GetLexeme())
+	return log.SyntaxErrorf("Parser.unexpectedLexeme", fmt.Errorf("%s: (%s) expected lexeme '%s', found '%s'", log.SyntaxError, p.lexical.DisplayPos(), expectedLexeme, p.lexical.GetLexeme()))
 }

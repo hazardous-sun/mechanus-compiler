@@ -2,19 +2,20 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	log "mechanus-compiler/src/error"
 	"mechanus-compiler/src/models"
 	"os"
 )
 
+var debug bool = false
+
 func main() {
 	// Collect source and output files
 	sourceFile, outputFile, err := getFiles()
-	errSalt := "(main) -> %w"
+	errSalt := "main"
 
 	if err != nil {
-		err = log.FileErrorf(errSalt, err)
-		log.LogError(err)
 		os.Exit(1)
 	}
 	defer func() {
@@ -29,17 +30,15 @@ func main() {
 	}()
 
 	// Initialize the parser
-	parser, err := models.NewParser(sourceFile, outputFile)
+	parser, err := models.NewParser(sourceFile, outputFile, debug)
 
 	if err != nil {
-		err = log.EnrichError(err, "(main)")
-		log.LogError(err)
 		os.Exit(1)
 	}
 
 	// Start the syntax analysis
 	if err = parser.Run(); err != nil {
-		err = log.EnrichError(err, "(main)")
+		os.Exit(1)
 	}
 }
 
@@ -54,7 +53,7 @@ func getFiles() (*os.File, *os.File, error) {
 	sourceFile, err := os.Open(filePaths[0])
 
 	if err != nil {
-		err = log.FileErrorf("(getFiles) -> %w", err)
+		err = log.FileErrorf("getFiles", err)
 		log.LogError(err)
 		return nil, nil, err
 	}
@@ -63,7 +62,7 @@ func getFiles() (*os.File, *os.File, error) {
 	outputFile, err := os.Create(filePaths[1])
 
 	if err != nil {
-		err = log.FileErrorf("(getFiles) -> %w", err)
+		err = log.FileErrorf("getFiles", err)
 		log.LogError(err)
 		return nil, nil, err
 	}
@@ -75,13 +74,14 @@ func getFilePaths() ([]string, error) {
 	// Define flags
 	inputFile := flag.String("i", "", "Source file path")
 	outputFile := flag.String("o", "", "Output file path")
+	debug = *flag.Bool("d", false, "Debug mode")
 
 	// Parse command line arguments
 	flag.Parse()
 
 	// Check if required flags are provided
 	if *inputFile == "" {
-		err := log.FileErrorf("(getFilePaths) -> %w", log.NoSourceFile)
+		err := log.FileErrorf("getFilePaths", fmt.Errorf(log.NoSourceFile))
 		log.LogError(err)
 		return nil, err
 	}

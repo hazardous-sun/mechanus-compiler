@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	InfoLevel    = "info"
+	DebugLevel   = "debug"
 	WarningLevel = "warning"
 	ErrorLevel   = "error"
 	SuccessLevel = "success"
@@ -24,8 +24,8 @@ const (
 // Logs a message to the appropriate channel.
 func customLog(message string, level string) {
 	switch level {
-	case InfoLevel:
-		log.Println(fmt.Sprintf("%sinfo: %s %s", infoColor, message, defaultColor))
+	case DebugLevel:
+		log.Println(fmt.Sprintf("%sdebug: %s %s", infoColor, message, defaultColor))
 	case WarningLevel:
 		log.Println(fmt.Sprintf("%swarning: %s %s", warningColor, message, defaultColor))
 	case ErrorLevel:
@@ -37,10 +37,10 @@ func customLog(message string, level string) {
 	}
 }
 
-// LogInfo :
+// LogDebug :
 // Logs an info.
-func LogInfo(message string) {
-	customLog(message, InfoLevel)
+func LogDebug(message string) {
+	customLog(message, DebugLevel)
 }
 
 // LogWarning :
@@ -59,10 +59,4 @@ func LogError(err error) {
 // Logs a success message.
 func LogSuccess(message string) {
 	customLog(message, SuccessLevel)
-}
-
-// EnrichError :
-// Enriches an error with extra context.
-func EnrichError(err error, context string) error {
-	return fmt.Errorf("%s", context, err)
 }
