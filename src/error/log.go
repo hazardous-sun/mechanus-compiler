@@ -21,9 +21,9 @@ const (
 	successColor = "\033[32m"
 )
 
-// Log :
-// Logs a message to stdout.
-func Log(message string, level string) {
+// customLog :
+// Logs a message to the appropriate channel.
+func customLog(message string, level string) {
 	switch level {
 	case InfoLevel:
 		log.Println(fmt.Sprintf("%sinfo: %s %s", infoColor, message, defaultColor))
@@ -38,17 +38,35 @@ func Log(message string, level string) {
 	}
 }
 
+// LogInfo :
+// Logs an info.
+func LogInfo(message string) {
+	customLog(message, InfoLevel)
+}
+
+// LogWarning :
+// Logs a warning.
+func LogWarning(message string) {
+	customLog(message, WarningLevel)
+}
+
 // LogError :
 // Logs an error with proper unwrapping
 func LogError(err error) {
 	var analysisErr AnalysisError
 	if errors.As(err, &analysisErr) {
 		// Handle our custom error types
-		Log(analysisErr.Error(), ErrorLevel)
+		customLog(analysisErr.Error(), ErrorLevel)
 	} else {
 		// Handle standard errors
-		Log(err.Error(), ErrorLevel)
+		customLog(err.Error(), ErrorLevel)
 	}
+}
+
+// LogSuccess :
+// Logs a success message.
+func LogSuccess(message string) {
+	customLog(message, SuccessLevel)
 }
 
 // EnrichError :
