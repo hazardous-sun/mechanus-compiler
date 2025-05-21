@@ -1,6 +1,7 @@
 package custom_errors
 
 import (
+	"errors"
 	"fmt"
 	"log"
 )
@@ -37,8 +38,21 @@ func Log(message string, level string) {
 	}
 }
 
+// LogError :
+// Logs an error with proper unwrapping
+func LogError(err error) {
+	var analysisErr AnalysisError
+	if errors.As(err, &analysisErr) {
+		// Handle our custom error types
+		Log(analysisErr.Error(), ErrorLevel)
+	} else {
+		// Handle standard errors
+		Log(err.Error(), ErrorLevel)
+	}
+}
+
 // EnrichError :
 // Enriches an error with extra context.
-func EnrichError(err error, msg string) error {
-	return fmt.Errorf("%s: %w", msg, err)
+func EnrichError(err error, context string) error {
+	return fmt.Errorf("%s: %w", context, err)
 }
