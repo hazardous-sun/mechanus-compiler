@@ -25,8 +25,8 @@ func NewParser(source, output *os.File) (Parser, error) {
 
 	// Check for errors during Lexical initialization
 	if err != nil {
-		err = log.EnrichError(err, "NewParser()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf("(NewParser) -> %w", err)
+		log.LogError(err)
 		return Parser{}, err
 	}
 
@@ -49,17 +49,17 @@ func (p *Parser) Run() error {
 	}
 
 	// Check if Lexical failed to reach EOF
-	if p.lexical.Fail() {
-		err := fmt.Errorf("%s -> %s", log.LexicalError, p.lexical.errorMessage)
-		log.Log(err.Error(), log.ErrorLevel)
+	if err := p.lexical.Fail(); err != nil {
+		err = log.SyntaxErrorf("(Parser.Run) -> %w", err)
+		log.LogError(err)
+		return err
 	}
 
-	log.Log(log.LexicalSuccess, log.SuccessLevel)
-	err := p.lexical.WriteOutput()
+	log.LogSuccess(log.LexicalSuccess)
 
-	if err != nil {
-		err = log.EnrichError(err, "Parser.Run()")
-		log.Log(err.Error(), log.ErrorLevel)
+	if err := p.lexical.WriteOutput(); err != nil {
+		err = log.SyntaxErrorf("(Parser.Run) -> %w", err)
+		log.LogError(err)
 		return err
 	}
 
@@ -67,11 +67,9 @@ func (p *Parser) Run() error {
 }
 
 func (p *Parser) parse() error {
-	err := p.g()
-
-	if err != nil {
-		err = log.EnrichError(err, "Parser.parse()")
-		log.Log(err.Error(), log.ErrorLevel)
+	if err := p.g(); err != nil {
+		err = log.SyntaxErrorf("(Parser.parse) -> %w", err)
+		log.LogError(err)
 		return err
 	}
 
@@ -80,27 +78,29 @@ func (p *Parser) parse() error {
 
 // <G> ::= '{' <BODY> '}' <TEXT_WITHOUT_NUMBERS> 'Construct'
 func (p *Parser) g() error {
+	errSalt := "(Parser.g) -> %w"
+
 	// Check for TConstruct
 	if p.lexical.GetToken() != TConstruct {
 		err := unexpectedLexeme(p, Construct)
-		err = log.EnrichError(err, "Parser.g()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
 		return err
 	}
 
 	// Check if EOF was reached
 	if !p.lexical.WIP() {
-		err := fmt.Errorf("missing Construct body")
-		err = log.EnrichError(err, "Parser.g()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err := fmt.Errorf(log.MissingConstructBody)
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
 		return err
 	}
 
 	_, err := p.lexical.NextToken()
 
 	if err != nil {
-		err = log.EnrichError(err, "Parser.g()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
 		return err
 	}
 
@@ -108,24 +108,24 @@ func (p *Parser) g() error {
 	err = p.textWithoutNumbers()
 
 	if err != nil {
-		err = log.EnrichError(err, "Parser.g()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
 		return err
 	}
 
 	token, err := p.lexical.NextToken()
 
 	if err != nil {
-		err = log.EnrichError(err, "Parser.g()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
 		return err
 	}
 
 	// Check for "}"
 	if token != TCloseBraces {
 		err := unexpectedLexeme(p, "}")
-		err = log.EnrichError(err, "Parser.g()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
 		return err
 	}
 
@@ -139,24 +139,24 @@ func (p *Parser) g() error {
 	err = p.body()
 
 	if err != nil {
-		err = log.EnrichError(err, "Parser.g()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
 		return err
 	}
 
 	token, err = p.lexical.NextToken()
 
 	if err != nil {
-		err = log.EnrichError(err, "Parser.g()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
 		return err
 	}
 
 	// Check for "{"
 	if token != TOpenBraces {
 		err := unexpectedLexeme(p, "{")
-		err = log.EnrichError(err, "Parser.g()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
 		return err
 	}
 
@@ -165,8 +165,8 @@ func (p *Parser) g() error {
 	// Check for EOF
 	if err == nil {
 		err = unexpectedLexeme(p, "EOF")
-		err = log.EnrichError(err, "Parser.g()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf(errSalt, err)
+		log.LogError(err)
 		return err
 	}
 
@@ -177,8 +177,8 @@ func (p *Parser) g() error {
 func (p *Parser) textWithoutNumbers() error {
 	if p.lexical.GetToken() != TId {
 		err := unexpectedLexeme(p, "ID")
-		err = log.EnrichError(err, "Parser.textWithoutNumbers()")
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.SyntaxErrorf("(Parser.textWithoutNumbers) -> %w", err)
+		log.LogError(err)
 		return err
 	}
 
@@ -203,5 +203,5 @@ func (p *Parser) bodyRest() error {
 
 // Helper methods
 func unexpectedLexeme(p *Parser, expectedLexeme string) error {
-	return fmt.Errorf("%s: (%s) expected lexeme '%s', found '%s'", log.SyntaxError, p.lexical.DisplayPos(), expectedLexeme, p.lexical.GetLexeme())
+	return log.SyntaxErrorf("%s: (%s) expected lexeme '%s', found '%s'", log.SyntaxError, p.lexical.DisplayPos(), expectedLexeme, p.lexical.GetLexeme())
 }

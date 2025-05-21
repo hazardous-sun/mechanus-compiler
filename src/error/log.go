@@ -72,5 +72,5 @@ func LogSuccess(message string) {
 // EnrichError :
 // Enriches an error with extra context.
 func EnrichError(err error, context string) error {
-	return fmt.Errorf("%s: %w", context, err)
+	return fmt.Errorf("%s -> %w", context, err)
 }

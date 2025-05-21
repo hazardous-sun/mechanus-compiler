@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	log "mechanus-compiler/src/error"
 	"mechanus-compiler/src/models"
@@ -11,27 +10,37 @@ import (
 func main() {
 	// Collect source and output files
 	sourceFile, outputFile, err := getFiles()
+	errSalt := "(main) -> %w"
+
 	if err != nil {
-		err = log.EnrichError(err, log.FileOpenError)
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.FileErrorf(errSalt, err)
+		log.LogError(err)
 		os.Exit(1)
 	}
 	defer func() {
 		if err := sourceFile.Close(); err != nil {
-			err = log.EnrichError(err, log.FileCloseError)
-			log.Log(err.Error(), log.ErrorLevel)
+			err = log.FileErrorf(errSalt, err)
+			log.LogError(err)
 		}
 		if err := outputFile.Close(); err != nil {
-			err = log.EnrichError(err, log.FileCloseError)
-			log.Log(err.Error(), log.ErrorLevel)
+			err = log.FileErrorf(errSalt, err)
+			log.LogError(err)
 		}
 	}()
 
 	// Initialize the parser
 	parser, err := models.NewParser(sourceFile, outputFile)
 
+	if err != nil {
+		err = log.EnrichError(err, "(main)")
+		log.LogError(err)
+		os.Exit(1)
+	}
+
 	// Start the syntax analysis
-	parser.Run()
+	if err = parser.Run(); err != nil {
+		err = log.EnrichError(err, "(main)")
+	}
 }
 
 func getFiles() (*os.File, *os.File, error) {
@@ -43,23 +52,19 @@ func getFiles() (*os.File, *os.File, error) {
 
 	// Open source file
 	sourceFile, err := os.Open(filePaths[0])
+
 	if err != nil {
-		err = log.EnrichError(err, log.FileOpenError)
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.FileErrorf("(getFiles) -> %w", err)
+		log.LogError(err)
 		return nil, nil, err
 	}
 
 	// Create output file
 	outputFile, err := os.Create(filePaths[1])
+
 	if err != nil {
-		err = log.EnrichError(err, log.FileCreateError)
-		err2 := sourceFile.Close()
-
-		if err2 != nil {
-			err = log.EnrichError(err, err2.Error())
-		}
-
-		log.Log(err.Error(), log.ErrorLevel)
+		err = log.FileErrorf("(getFiles) -> %w", err)
+		log.LogError(err)
 		return nil, nil, err
 	}
 
@@ -76,8 +81,8 @@ func getFilePaths() ([]string, error) {
 
 	// Check if required flags are provided
 	if *inputFile == "" {
-		err := errors.New(log.NoSourceFile)
-		log.Log(err.Error(), log.ErrorLevel)
+		err := log.FileErrorf("(getFilePaths) -> %w", log.NoSourceFile)
+		log.LogError(err)
 		return nil, err
 	}
 

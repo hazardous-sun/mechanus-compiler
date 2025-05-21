@@ -3,8 +3,9 @@ package custom_errors
 import "fmt"
 
 const (
-	SyntaxSuccess = "syntax analysis completed with no errors"
-	SyntaxError   = "syntax error"
+	SyntaxSuccess        = "syntax analysis completed with no errors"
+	SyntaxError          = "syntax error"
+	MissingConstructBody = "missing Construct body"
 )
 
 // SyntaxErrorf :
