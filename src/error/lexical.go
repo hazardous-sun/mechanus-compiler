@@ -9,10 +9,10 @@ const (
 )
 
 // LexicalErrorf :
-// Creates a new lexical error with formatted message.
+// Wraps an existing error with additional context and the ErrLexical type.
 //
 // Example usage:
-// return LexicalErrorf("unknown character '%c' at position %d", char, pos)
-func LexicalErrorf(format string, args ...interface{}) error {
-	return fmt.Errorf("%w: %s", ErrLexical, fmt.Sprintf(format, args...))
+// return LexicalErrorf("caller function", ErrSomething)
+func LexicalErrorf(context string, err error) error {
+	return fmt.Errorf("(%s) %s -> %w", ErrLexical, context, err)
 }

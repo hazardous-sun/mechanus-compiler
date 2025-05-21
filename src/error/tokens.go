@@ -7,11 +7,10 @@ const (
 )
 
 // TokenErrorf :
-// Creates a new token-related error
+// Wraps an existing error with additional context and the ErrToken type.
 //
 // Example usage:
-// return TokenErrorf(InvalidMonodrone)
-// return TokenErrorf("invalid token '%s'", token)
-func TokenErrorf(format string, args ...interface{}) error {
-	return fmt.Errorf("%w: %s", ErrToken, fmt.Sprintf(format, args...))
+// return TokenErrorf("caller function", ErrSomething)
+func TokenErrorf(context string, err error) error {
+	return fmt.Errorf("(%s) %s -> %w", ErrToken, context, err)
 }

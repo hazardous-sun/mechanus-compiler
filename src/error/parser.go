@@ -9,10 +9,10 @@ const (
 )
 
 // SyntaxErrorf :
-// Creates a new syntax error with formatted message.
+// Wraps an existing error with additional context and the ErrSyntax type.
 //
 // Example usage:
-// return SyntaxErrorf("unexpected token '%s'", token)
-func SyntaxErrorf(format string, args ...interface{}) error {
-	return fmt.Errorf("%w: %s", ErrSyntax, fmt.Sprintf(format, args...))
+// return SyntaxErrorf("caller function", ErrSomething)
+func SyntaxErrorf(context string, err error) error {
+	return fmt.Errorf("(%s) %s -> %w", ErrSyntax, context, err)
 }

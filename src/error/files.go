@@ -17,26 +17,22 @@ const (
 )
 
 // FileError :
-// Creates a new file-related error with a static message.
-// This is the simpler version of FileErrorf for when no formatting is needed.
-// The error will be wrapped with the ErrFile type for consistent error handling.
+// Wraps an existing error with the ErrFile type to provide consistent error handling.
+// This annotates the error with file-related context while preserving the original error chain.
 //
 // Example usage:
-// return FileError(InvalidFileName)
-// return FileError(FileOpenError)
-func FileError(msg string) error {
-	return fmt.Errorf("%w: %s", ErrFile, msg)
+// return FileError(ErrSomething)
+func FileError(err error) error {
+	return fmt.Errorf("(%w) %w", ErrFile, err)
 }
 
 // FileErrorf :
-// Creates a new formatted file-related error with context.
-// Wraps the error with ErrFile type while preserving the original error structure.
-// Supports all standard fmt.Sprintf formatting verbs.
+// Wraps an existing error with additional context and the ErrFile type.
+// This provides a structured way to annotate file-related errors while preserving
+// the original error chain. The context string describes the error scenario.
 //
 // Example usage:
-// return FileErrorf(InvalidFileName)
-// return FileErrorf("%s: %s", FileOpenError, filename)
-// return FileErrorf("failed to read %s at offset %d", filename, offset)
-func FileErrorf(format string, args ...interface{}) error {
-	return fmt.Errorf("%w: %s", ErrFile, fmt.Sprintf(format, args...))
+// return FileErrorf("caller function", ErrSomething)
+func FileErrorf(context string, err error) error {
+	return fmt.Errorf("(%s) %s -> %w", ErrFile, context, err)
 }
