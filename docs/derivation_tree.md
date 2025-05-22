@@ -42,7 +42,7 @@
 
 <CMD_FOR> ::= '{' <CMDS> '}' 'for' <CONDITION>
 
-<CMD_DECLARATION> ::= <E> '=:' <VAR>
+<CMD_DECLARATION> ::= <E> '=:' <TYPE> ':' <VAR>
 
 <CMD_ASSIGNMENT> ::= <E> '=' <VAR> 
 
@@ -74,7 +74,10 @@
 
 <X> ::= '(' <E> ')'
 <X> ::= [0-9]+('.'[0-9]+)
+<X> ::= <STRING>
 <X> ::= <VAR>
+
+<STRING> ::= '"' <TEXT_WITH_NUMBERS> '"'
 
 <PARAMETERS> ::= <ID> ':' <TYPE>
 <PARAMETERS> ::= <ID> ':' <TYPE> <EXTRA_PARAMETERS>
