@@ -450,18 +450,18 @@ func (lex *Lexer) alphabeticalCharacter() error {
 	case Detach:
 		lex.token = TDetach
 	case Nil:
-		lex.token = TTypeName
+		lex.token = TNil
 	// Types
 	case Gear:
-		lex.token = TTypeName
+		lex.token = TGear
 	case Tensor:
-		lex.token = TTypeName
+		lex.token = TTensor
 	case State:
-		lex.token = TTypeName
+		lex.token = TState
 	case Monodrone:
-		lex.token = TTypeName
+		lex.token = TMonodrone
 	case Omnidrone:
-		lex.token = TTypeName
+		lex.token = TOmnidrone
 	// Built-in functions
 	case Send:
 		lex.token = TSend
