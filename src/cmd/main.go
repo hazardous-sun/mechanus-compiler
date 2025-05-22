@@ -74,7 +74,7 @@ func getFilePaths() ([]string, error) {
 	// Define flags
 	inputFile := flag.String("i", "", "Source file path")
 	outputFile := flag.String("o", "", "Output file path")
-	debug = *flag.Bool("d", false, "Debug mode")
+	flag.BoolVar(&debug, "d", false, "Debug mode")
 
 	// Parse command line arguments
 	flag.Parse()
