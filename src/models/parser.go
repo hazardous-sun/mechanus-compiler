@@ -1162,6 +1162,7 @@ func (parser *Parser) handleSyntaxError(err error) error {
 // Accumulates the recognized grammar rule for output.
 func (parser *Parser) accumulateRule(rule string) {
 	if parser.debug {
+		log.LogDebug(fmt.Sprintf("Recognized rule: %s\n", rule))
 		parser.recognizedRules.WriteString(fmt.Sprintf("Recognized rule: %s\n", rule))
 	}
 }

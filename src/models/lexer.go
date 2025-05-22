@@ -109,6 +109,10 @@ func (lex *Lexer) NextToken() (int, error) {
 		return -1, err
 	}
 
+	if lex.debug {
+		log.LogDebug(fmt.Sprintf("Lexer.Token = %d", lex.token))
+	}
+
 	return lex.token, nil
 }
 
