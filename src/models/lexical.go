@@ -364,7 +364,7 @@ func reverse(s string) string {
 
 // Checks if the current character is a separator (e.g., space, tab, newline).
 func (lex *Lexical) isSeparatorCharacter() bool {
-	return lex.lookAhead == ' ' || lex.lookAhead == '\t' || lex.lookAhead == '\n' || lex.lookAhead == '\r'
+	return lex.lookAhead == ' ' || lex.lookAhead == '\t' || lex.lookAhead == '\r'
 }
 
 // Checks if the current character is an alphabetical letter (A-Z or a-z).
@@ -824,6 +824,8 @@ func (lex *Lexical) displayStructureToken() string {
 		return OutputOpenMultilineComment
 	case TCloseMultilineComment:
 		return OutputCloseMultilineComment
+	case TNewLine:
+		return OutputNewLine
 	default:
 		return "N/A"
 	}

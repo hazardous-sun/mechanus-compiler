@@ -32,6 +32,7 @@ const (
 	TSingleLineComment     = 205
 	TOpenMultilineComment  = 206
 	TCloseMultilineComment = 207
+	TNewLine               = 208
 
 	//	 Operator tokens
 
@@ -201,6 +202,7 @@ const (
 	OutputSingleLineComment     = "T_SINGLE_LINE_COMMENT"
 	OutputOpenMultilineComment  = "T_OPEN_MULTILINE_COMMENT"
 	OutputCloseMultilineComment = "T_CLOSE_MULTILINE_COMMENT"
+	OutputNewLine               = "T_NEW_LINE"
 
 	//   Operators
 
