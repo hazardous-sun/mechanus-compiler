@@ -300,13 +300,19 @@ func (parser *Parser) cmd() error {
 		return parser.cmdReceive()
 	case TSend: // CMD_SEND - looking for 'Send'
 		return parser.cmdSend()
-	case TDeclarationOperator: // CMD_DECLARATION - looking for '=:'
-		return parser.cmdDeclaration()
-	case TAttributionOperator: // CMD_ASSIGNMENT - looking for '='
-		return parser.cmdAssignment()
-	default:
-		return parser.handleSyntaxError(fmt.Errorf("expected a command, got %s", parser.lexeme))
 	}
+
+	// <CMD_DECLARATION>
+	if err := parser.cmdDeclaration(); err == nil {
+		return nil
+	}
+
+	// <CMD_ASSIGNMENT>
+	if err := parser.cmdAssignment(); err == nil {
+		return nil
+	}
+
+	return parser.handleSyntaxError(fmt.Errorf("expected a command, got %s", parser.lexeme))
 }
 
 // cmdIf :
@@ -595,10 +601,24 @@ func (parser *Parser) cmdFor() error {
 // <CMD_DECLARATION> ::= <E> '=:' <VAR>
 func (parser *Parser) cmdDeclaration() error {
 	errSalt := "Parser.cmdDeclaration"
-	parser.accumulateRule("<CMD_DECLARATION> ::= <E> '=:' <VAR>")
+	parser.accumulateRule("<CMD_DECLARATION> ::= <E> '=:' <TYPE> ':' <VAR>")
 
 	// Expect <VAR>
 	if err := parser.var_(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// Expect ':'
+	if parser.token != TColon {
+		return parser.handleSyntaxError(fmt.Errorf("expected ':', got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// Expect <TYPE>
+	if err := parser.type_(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
@@ -885,10 +905,10 @@ func (parser *Parser) f() error {
 }
 
 // x :
-// <X> ::= '(' <E> ')' | [0-9]+('.'[0-9]+) | <VAR>
+// <X> ::= '(' <E> ')' | [0-9]+('.'[0-9]+) | <VAR> | <STRING>
 func (parser *Parser) x() error {
 	errSalt := "Parser.x"
-	parser.accumulateRule("<X> ::= '(' <E> ')' | [0-9]+('.'[0-9]+) | <VAR>")
+	parser.accumulateRule("<X> ::= '(' <E> ')' | [0-9]+('.'[0-9]+) | <VAR> | <STRING>")
 
 	if parser.token == TOpenParentheses { // '(' <E> ')'
 		parser.displayToken()
@@ -905,7 +925,7 @@ func (parser *Parser) x() error {
 		if err := parser.advanceToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
-	} else if parser.token == TGear || parser.token == TTensor { // [0-9]+('.'[0-9]+)
+	} else if parser.token == TGear || parser.token == TTensor { // [0-9]+('.'[0-9]+) (numbers)
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
@@ -914,8 +934,30 @@ func (parser *Parser) x() error {
 		if err := parser.var_(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
+	} else if parser.token == TDoubleQuote { // <STRING> (Omnidrone token is used for strings)
+		if err := parser.string_(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
+		}
 	} else {
-		return parser.handleSyntaxError(fmt.Errorf("expected '(', a number, or an identifier, got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf("expected '(', a number, an identifier, or a string, got %s", parser.lexeme))
+	}
+	return nil
+}
+
+// string_ :
+// <STRING> ::= '"' <TEXT_WITH_NUMBERS> '"'
+// Note: TEXT_WITH_NUMBERS is implicitly handled by the Lexer as part of TOmnidrone.
+func (parser *Parser) string_() error {
+	parser.accumulateRule("<STRING> ::= '\"' <TEXT_WITH_NUMBERS> '\"'")
+
+	// The lexer identifies the entire string literal (including quotes) as TOmnidrone.
+	// So, we just need to consume the TOmnidrone token here.
+	if parser.token != TDoubleQuote {
+		return parser.handleSyntaxError(fmt.Errorf("expected a string literal, got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return err // Propagation of error
 	}
 	return nil
 }
