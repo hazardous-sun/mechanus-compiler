@@ -13,18 +13,18 @@ type Parser struct {
 	debug   bool
 	source  *os.File
 	output  *os.File
-	lexical Lexical
+	lexical Lexer
 }
 
 // NewParser :
 // Initializes a new instance of Parser with the provided input and output files.
 //
-// Fails if it is not possible to read the source file, or if the Lexical initialization fails.
+// Fails if it is not possible to read the source file, or if the Lexer initialization fails.
 func NewParser(source, output *os.File, debug bool) (Parser, error) {
-	// Initialize Lexical
+	// Initialize Lexer
 	lex, err := NewLexical(source, output, debug)
 
-	// Check for errors during Lexical initialization
+	// Check for errors during Lexer initialization
 	if err != nil {
 		err = log.SyntaxErrorf("NewParser", err)
 		log.LogError(err)
@@ -50,7 +50,7 @@ func (p *Parser) Run() error {
 		}
 	}
 
-	// Check if Lexical failed to reach EOF
+	// Check if Lexer failed to reach EOF
 	if err := p.lexical.Fail(); err != nil {
 		err = log.SyntaxErrorf("Parser.Run", err)
 		log.LogError(err)
