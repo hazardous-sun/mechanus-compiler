@@ -91,20 +91,10 @@ func (lex *Lexer) NextToken() (int, error) {
 		}
 	}
 
-	var err error
-
-	if lex.isAlphabeticalCharacter() {
-		err = lex.alphabeticalCharacter()
-	} else if lex.isNumericalCharacter() {
-		err = lex.numericalCharacter()
-	} else if lex.isQuotation() {
-		err = lex.quoteCharacters()
-	} else {
-		err = lex.symbolCharacter()
-	}
+	err := lex.collectLexeme()
 
 	if err != nil {
-		err = log.LexerErrorf("Lexer.NextToken", err)
+		err = log.LexerErrorf(errSalt, err)
 		log.LogError(err)
 		return -1, err
 	}
@@ -365,6 +355,29 @@ func reverse(s string) string {
 }
 
 // ----- Lexeme identifiers --------------------------------------------------------------------------------------------
+
+// Collects the newly found lexeme
+func (lex *Lexer) collectLexeme() error {
+	var err error
+
+	if lex.isAlphabeticalCharacter() {
+		err = lex.alphabeticalCharacter()
+	} else if lex.isNumericalCharacter() {
+		err = lex.numericalCharacter()
+	} else if lex.isQuotation() {
+		err = lex.quoteCharacters()
+	} else {
+		err = lex.symbolCharacter()
+	}
+
+	if err != nil {
+		err = log.LexerErrorf("Lexer.collectLexeme", err)
+		log.LogError(err)
+		return err
+	}
+
+	return nil
+}
 
 // Checks if the current character is a separator (e.g., space, tab, newline).
 func (lex *Lexer) isSeparatorCharacter() bool {
