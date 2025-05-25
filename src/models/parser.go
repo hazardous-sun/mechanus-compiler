@@ -20,6 +20,14 @@ type Parser struct {
 	recognizedRules strings.Builder
 }
 
+const (
+	errExpectedCloseBraces      = "expected '}', got %s"
+	errExpectedOpenBraces       = "expected '{', got %s"
+	errExpectedOpenParenthesis  = "expected '(', got %s"
+	errExpectedCloseParenthesis = "expected ')', got %s"
+	errExpectedIdentifier       = "expected an identifier, got %s"
+)
+
 // NewParser :
 // Initializes a new Parser instance with the provided input and output files.
 //
@@ -87,7 +95,7 @@ func (parser *Parser) g() error {
 
 	// Expect <ID>
 	if parser.token != TId {
-		return parser.handleSyntaxError(fmt.Errorf("expected an Identifier, got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedIdentifier, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -96,7 +104,7 @@ func (parser *Parser) g() error {
 
 	// Expect '}'
 	if parser.token != TCloseBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -110,7 +118,7 @@ func (parser *Parser) g() error {
 
 	// Expect '{'
 	if parser.token != TOpenBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -148,7 +156,7 @@ func (parser *Parser) body() error {
 
 	// Expect <ID>
 	if parser.token != TId {
-		return parser.handleSyntaxError(fmt.Errorf("expected an Identifier, got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedIdentifier, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -157,7 +165,7 @@ func (parser *Parser) body() error {
 
 	// Expect ')'
 	if parser.token != TCloseParentheses {
-		return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -169,7 +177,7 @@ func (parser *Parser) body() error {
 
 	// Expect '('
 	if parser.token != TOpenParentheses {
-		return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenParenthesis, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -189,7 +197,7 @@ func (parser *Parser) body() error {
 
 	// Expect '}'
 	if parser.token != TCloseBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -203,7 +211,7 @@ func (parser *Parser) body() error {
 
 	// Expect '{'
 	if parser.token != TOpenBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -236,9 +244,9 @@ func (parser *Parser) bodyRest() error {
 	return nil
 }
 
-// type_ :
+// typeToken :
 // <TYPE> ::= 'Nil' | 'Gear' | 'Tensor' | 'State' | 'Monodrone' | 'Omnidrone'
-func (parser *Parser) type_() error {
+func (parser *Parser) typeToken() error {
 	parser.accumulateRule("<TYPE> ::= 'Nil' | 'Gear' | 'Tensor' | 'State' | 'Monodrone' | 'Omnidrone'")
 	if parser.token != TNilValue && parser.token != TGear && parser.token != TTensor &&
 		parser.token != TState && parser.token != TMonodrone && parser.token != TOmnidrone {
@@ -366,7 +374,7 @@ func (parser *Parser) cmdIf() error {
 
 	// Expect '}'
 	if parser.token != TCloseBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -380,7 +388,7 @@ func (parser *Parser) cmdIf() error {
 
 	// Expect '{'
 	if parser.token != TOpenBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -395,7 +403,7 @@ func (parser *Parser) cmdIf() error {
 		}
 		// Expect '}' after 'else' block
 		if parser.token != TCloseBraces {
-			return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
+			return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
@@ -407,7 +415,7 @@ func (parser *Parser) cmdIf() error {
 		}
 		// Expect '{' for 'else' block
 		if parser.token != TOpenBraces {
-			return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
+			return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
@@ -443,7 +451,7 @@ func (parser *Parser) cmdElif() error {
 
 	// Expect '}'
 	if parser.token != TCloseBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -457,7 +465,7 @@ func (parser *Parser) cmdElif() error {
 
 	// Expect '{'
 	if parser.token != TOpenBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -494,7 +502,7 @@ func (parser *Parser) cmdElifRest() error {
 
 	// Expect '}'
 	if parser.token != TCloseBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -508,7 +516,7 @@ func (parser *Parser) cmdElifRest() error {
 
 	// Expect '{'
 	if parser.token != TOpenBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -523,7 +531,7 @@ func (parser *Parser) cmdElifRest() error {
 		}
 		// Expect '}' after 'else' block
 		if parser.token != TCloseBraces {
-			return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
+			return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
@@ -535,7 +543,7 @@ func (parser *Parser) cmdElifRest() error {
 		}
 		// Expect '{' for 'else' block
 		if parser.token != TOpenBraces {
-			return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
+			return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
@@ -587,7 +595,7 @@ func (parser *Parser) cmdFor() error {
 
 	// Expect '{'
 	if parser.token != TOpenBraces {
-		return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -601,16 +609,17 @@ func (parser *Parser) cmdFor() error {
 // <CMD_DECLARATION> ::= <E> '=:' <VAR>
 func (parser *Parser) cmdDeclaration() error {
 	errSalt := "Parser.cmdDeclaration"
+	errExpectedColon := "expected ':', got %s"
 	parser.accumulateRule("<CMD_DECLARATION> ::= <E> '=:' <TYPE> ':' <VAR>")
 
 	// Expect <VAR>
-	if err := parser.var_(); err != nil {
+	if err := parser.varToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
 	// Expect ':'
 	if parser.token != TColon {
-		return parser.handleSyntaxError(fmt.Errorf("expected ':', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedColon, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -618,7 +627,7 @@ func (parser *Parser) cmdDeclaration() error {
 	}
 
 	// Expect <TYPE>
-	if err := parser.type_(); err != nil {
+	if err := parser.typeToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
@@ -646,7 +655,7 @@ func (parser *Parser) cmdAssignment() error {
 	parser.accumulateRule("<CMD_ASSIGNMENT> ::= <E> '=' <VAR>")
 
 	// Expect <VAR>
-	if err := parser.var_(); err != nil {
+	if err := parser.varToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
@@ -684,7 +693,7 @@ func (parser *Parser) cmdReceive() error {
 
 	// Expect ')'
 	if parser.token != TCloseParentheses {
-		return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseParenthesis, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -692,13 +701,13 @@ func (parser *Parser) cmdReceive() error {
 	}
 
 	// Expect <VAR>
-	if err := parser.var_(); err != nil {
+	if err := parser.varToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
 	// Expect '('
 	if parser.token != TOpenParentheses {
-		return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenParenthesis, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -725,7 +734,7 @@ func (parser *Parser) cmdSend() error {
 
 	// Expect ')'
 	if parser.token != TCloseParentheses {
-		return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseParenthesis, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -739,7 +748,7 @@ func (parser *Parser) cmdSend() error {
 
 	// Expect '('
 	if parser.token != TOpenParentheses {
-		return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenParenthesis, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -919,7 +928,7 @@ func (parser *Parser) x() error {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 		if parser.token != TCloseParentheses {
-			return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
+			return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseParenthesis, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
@@ -931,7 +940,7 @@ func (parser *Parser) x() error {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 	} else if parser.token == TId { // <VAR> (which is <ID>)
-		if err := parser.var_(); err != nil {
+		if err := parser.varToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 	} else if parser.token == TDoubleQuote { // <STRING> (Omnidrone token is used for strings)
@@ -944,10 +953,10 @@ func (parser *Parser) x() error {
 	return nil
 }
 
-// string_ :
+// stringToken :
 // <STRING> ::= '"' <TEXT_WITH_NUMBERS> '"'
 // Note: TEXT_WITH_NUMBERS is implicitly handled by the Lexer as part of TOmnidrone.
-func (parser *Parser) string_() error {
+func (parser *Parser) stringToken() error {
 	parser.accumulateRule("<STRING> ::= '\"' <TEXT_WITH_NUMBERS> '\"'")
 
 	// The lexer identifies the entire string literal (including quotes) as TOmnidrone.
@@ -962,10 +971,10 @@ func (parser *Parser) string_() error {
 	return nil
 }
 
-// var_ :
+// varToken :
 // <VAR> ::= <ID>
-func (parser *Parser) var_() error {
-	errSalt := "Parser.var_"
+func (parser *Parser) varToken() error {
+	errSalt := "Parser.varToken"
 	parser.accumulateRule("<VAR> ::= <ID>")
 
 	if err := parser.id(); err != nil {
@@ -1004,13 +1013,13 @@ func (parser *Parser) parameters() error {
 	}
 
 	// Then, <TYPE>
-	if err := parser.type_(); err != nil {
+	if err := parser.typeToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
 	// Then, ':'
 	if parser.token != TColon {
-		return parser.handleSyntaxError(fmt.Errorf("expected ':', got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedColon, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
@@ -1030,6 +1039,7 @@ func (parser *Parser) parameters() error {
 // <EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> ',' <PARAMETERS>
 func (parser *Parser) extraParameters() error {
 	errSalt := "Parser.extraParameters"
+	errExpectedColon := "expected ':', got %s"
 	parser.accumulateRule("<EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> | ',' <ID> ':' <TYPE> ',' <PARAMETERS>")
 
 	// If there's a comma, it's a recursive call or a single extra parameter.
@@ -1077,13 +1087,13 @@ func (parser *Parser) extraParameters() error {
 
 		// Try to match the elements of the rule from right to left
 		// So first look for <TYPE>
-		if err := parser.type_(); err != nil {
+		if err := parser.typeToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 
 		// Then ':'
 		if parser.token != TColon {
-			return parser.handleSyntaxError(fmt.Errorf("expected ':', got %s", parser.lexeme))
+			return parser.handleSyntaxError(fmt.Errorf(errExpectedColon, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
