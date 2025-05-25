@@ -137,7 +137,7 @@ func (lex *Lexer) GetLexeme() string {
 // DisplayPos :
 // Returns the current line and column in a formatted string.
 func (lex *Lexer) DisplayPos() string {
-	return fmt.Sprintf("Line: %d, Column: %d", lex.currentLine, lex.currentColumn)
+	return fmt.Sprintf("Line: %d, Column: %d", lex.currentLine+1, lex.currentColumn+1)
 }
 
 // GetPos :
