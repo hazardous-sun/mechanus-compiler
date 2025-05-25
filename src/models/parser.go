@@ -123,6 +123,9 @@ func (parser *Parser) g() error {
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
+		if strings.Contains(err.Error(), log.EndOfFileReached) {
+			return nil
+		}
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
@@ -216,6 +219,9 @@ func (parser *Parser) body() error {
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
+		if strings.Contains(err.Error(), log.EndOfFileReached) {
+			return nil
+		}
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
@@ -312,12 +318,27 @@ func (parser *Parser) typeToken() error {
 func (parser *Parser) cmds() error {
 	parser.accumulateRule("<CMDS> ::= <CMDS_REST> <CMD>")
 
-	// First recurse cmdsRest
-	if err := parser.cmdsRest(); err != nil {
-		return err
+	for {
+		// Skip any newlines
+		for parser.token == TNewLine {
+			parser.displayToken()
+			if err := parser.advanceToken(); err != nil {
+				return err
+			}
+		}
+
+		// If we hit '{', we're done with <CMDS>
+		if parser.token == TOpenBraces {
+			break
+		}
+
+		// Attempt to parse one command
+		if err := parser.cmd(); err != nil {
+			return err
+		}
 	}
-	// Then parse CMD
-	return parser.cmd()
+
+	return nil
 }
 
 // cmdsRest :
@@ -341,28 +362,29 @@ func (parser *Parser) cmdsRest() error {
 func (parser *Parser) cmd() error {
 	parser.accumulateRule("<CMD> ::= <CMD_IF> | <CMD_FOR> | <CMD_DECLARATION> | <CMD_ASSIGNMENT> | <CMD_RECEIVE> | <CMD_SEND>")
 
+	// Decision based on current token
 	switch parser.token {
-	case TIf: // CMD_IF - looking for 'if' or 'else' or 'elif'
-		return parser.cmdIf()
-	case TFor: // CMD_FOR - looking for 'for'
-		return parser.cmdFor()
-	case TReceive: // CMD_RECEIVE - looking for 'Receive'
-		return parser.cmdReceive()
-	case TSend: // CMD_SEND - looking for 'Send'
+	case TSend:
 		return parser.cmdSend()
+	case TReceive:
+		return parser.cmdReceive()
+	case TIf:
+		return parser.cmdIf()
+	case TFor:
+		return parser.cmdFor()
+	case TIntegrate:
+		return parser.cmdIntegrate()
 	}
 
-	// <CMD_DECLARATION>
+	// Now attempt more generic commands
 	if err := parser.cmdDeclaration(); err == nil {
 		return nil
 	}
-
-	// <CMD_ASSIGNMENT>
 	if err := parser.cmdAssignment(); err == nil {
 		return nil
 	}
 
-	return parser.handleSyntaxError(fmt.Errorf("expected a command, got %s", parser.lexeme))
+	return parser.handleSyntaxError(fmt.Errorf("unknown command or malformed syntax at %s", parser.lexeme))
 }
 
 // cmdIf :
@@ -390,22 +412,6 @@ func (parser *Parser) cmdIf() error {
 	if err := parser.condition(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
-
-	// Now parse the preceding structure:
-	// It can be '{' <CMDS> '}'
-	// Or '{' <CMDS> '}' 'else' '{' <CMDS> '}'
-	// Or <CMD_ELIF>
-
-	// If the next token is '}', it's the end of a command block.
-	// We need to look backward for the structure.
-
-	// This is where the right-to-left parsing becomes critical.
-	// The grammar specifies:
-	// <CMD_IF> ::= '{' <CMDS> '}' 'if' <CONDITION>
-	// <CMD_IF> ::= '{' <CMDS> '}' 'else' '{' <CMDS> '}' 'if' <CONDITION>
-	// <CMD_IF> ::= <CMD_ELIF> '{' <CMDS> '}' 'if' <CONDITION>
-
-	// We have already consumed 'if' <CONDITION>. Now we need to handle the parts before it.
 
 	// Scenario 1: <CMD_ELIF>
 	if parser.token == TElif {
@@ -605,7 +611,7 @@ func (parser *Parser) cmdElifRest() error {
 // <CMD_FOR> ::= '{' <CMDS> '}' 'for' <CONDITION>
 func (parser *Parser) cmdFor() error {
 	errSalt := "Parser.cmdFor"
-	parser.accumulateRule("<CMD_FOR> ::= '{' <CMDS> '}' 'for' <CONDITION>")
+	parser.accumulateRule("<CMD_FOR> ::= '{' <CMDS> '}' <CONDITION> 'for'")
 
 	// Expect 'for'
 	if parser.token != TFor {
@@ -641,6 +647,27 @@ func (parser *Parser) cmdFor() error {
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	return nil
+}
+
+func (parser *Parser) cmdIntegrate() error {
+	errSalt := "Parser.cmdIntegrate"
+	parser.accumulateRule("<CMD_INTEGRATE> ::= <E> 'Integrate'")
+
+	// Expect 'Integrate'
+	if parser.token != TIntegrate {
+		return parser.handleSyntaxError(fmt.Errorf("expected 'Integrate', got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// Expect <E>
+	if err := parser.e(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
@@ -761,39 +788,38 @@ func (parser *Parser) cmdReceive() error {
 // cmdSend :
 // <CMD_SEND> ::= '(' <E> ')' 'Send'
 func (parser *Parser) cmdSend() error {
-	errSalt := "Parser.cmdSend"
 	parser.accumulateRule("<CMD_SEND> ::= '(' <E> ')' 'Send'")
 
-	// Expect 'Send'
+	// Expect TSend (first, since lexing is bottom-up, right-to-left)
 	if parser.token != TSend {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'Send', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
-	// Expect ')'
+	// Expect TCloseParentheses
 	if parser.token != TCloseParentheses {
-		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseParenthesis, parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
-	// Expect <E>
+	// Parse <E>
 	if err := parser.e(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
-	// Expect '('
+	// Expect TOpenParentheses
 	if parser.token != TOpenParentheses {
-		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenParenthesis, parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil

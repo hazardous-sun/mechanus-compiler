@@ -29,6 +29,7 @@
 <CMD> ::= <CMD_ASSIGNMENT>
 <CMD> ::= <CMD_RECEIVE>
 <CMD> ::= <CMD_SEND>
+<CMD> ::= <CMD_INTEGRATE>
 
 <CMD_IF> ::= '{' <CMDS> '}' <CONDITION> 'if'
 <CMD_IF> ::= '{' <CMDS> '}' 'else' '{' <CMDS> '}' <CONDITION> 'if'  
@@ -50,6 +51,8 @@
 <CMD_RECEIVE> ::= '(' <VAR> ')' 'Receive'
 
 <CMD_SEND> ::= '(' <E> ')' 'Send'
+
+<CMD_INTEGRATE> ::= <E> 'Integrate'
 
 <CONDITION> ::= <E> '>' <E> 
 <CONDITION> ::= <E> '>=' <E> 
