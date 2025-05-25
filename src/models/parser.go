@@ -227,21 +227,68 @@ func (parser *Parser) body() error {
 // <BODY_REST> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect' <BODY_REST>
 // <BODY_REST> ::= ε
 func (parser *Parser) bodyRest() error {
-	errSalt := "Parser.bodyRest"
-	parser.accumulateRule("<BODY_REST> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' <BODY_REST> | '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect' <BODY_REST> | ε")
+	parser.accumulateRule("<BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' | <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect' | ε")
 
-	// If the next token is 'Architect', we have a BODY_REST, otherwise it's epsilon.
 	if parser.token == TArchitect {
-		if err := parser.body(); err != nil { // Re-use the body method, as the structure is similar
-			return log.SyntaxErrorf(errSalt, err)
+		if err := parser.advanceToken(); err != nil {
+			return err
 		}
-		// After parsing a body, recursively call bodyRest to handle multiple bodies.
-		if err := parser.bodyRest(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
+
+		// Expect <ID>
+		if parser.token != TId {
+			return parser.handleSyntaxError(fmt.Errorf("expected ID, got %s", parser.lexeme))
 		}
-	} else {
-		parser.accumulateRule("<BODY_REST> ::= ε")
+		if err := parser.advanceToken(); err != nil {
+			return err
+		}
+
+		// Expect ')'
+		if parser.token != TCloseParentheses {
+			return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
+		}
+		if err := parser.advanceToken(); err != nil {
+			return err
+		}
+
+		// Try parsing parameters (may be ε)
+		if parser.token != TOpenParentheses {
+			_ = parser.parameters() // fail quietly if empty
+		}
+
+		// If a TYPE appears, consume it
+		if isTypeToken(parser.token) {
+			if err := parser.advanceToken(); err != nil {
+				return err
+			}
+		}
+
+		// Expect '}'
+		if parser.token != TCloseBraces {
+			return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
+		}
+		if err := parser.advanceToken(); err != nil {
+			return err
+		}
+
+		// Parse CMDS
+		if err := parser.cmds(); err != nil {
+			return err
+		}
+
+		// Expect '{'
+		if parser.token != TOpenBraces {
+			return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
+		}
+		if err := parser.advanceToken(); err != nil {
+			return err
+		}
+
+		// Recurse BODY_REST
+		return parser.bodyRest()
 	}
+
+	// epsilon production
+	parser.accumulateRule("<BODY_REST> ::= ε")
 	return nil
 }
 
@@ -263,35 +310,29 @@ func (parser *Parser) typeToken() error {
 // cmds :
 // <CMDS> ::= <CMD> <CMDS_REST>
 func (parser *Parser) cmds() error {
-	errSalt := "Parser.cmds"
-	parser.accumulateRule("<CMDS> ::= <CMD> <CMDS_REST>")
+	parser.accumulateRule("<CMDS> ::= <CMDS_REST> <CMD>")
 
-	if err := parser.cmd(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
-	}
+	// First recurse cmdsRest
 	if err := parser.cmdsRest(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
+		return err
 	}
-	return nil
+	// Then parse CMD
+	return parser.cmd()
 }
 
 // cmdsRest :
 // <CMDS_REST> ::= '\n' <CMDS> | ε
 func (parser *Parser) cmdsRest() error {
-	errSalt := "Parser.cmdsRest"
 	parser.accumulateRule("<CMDS_REST> ::= '\\n' <CMDS> | ε")
 
 	if parser.token == TNewLine {
-		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
+			return err
 		}
-		if err := parser.cmds(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
-	} else {
-		parser.accumulateRule("<CMDS_REST> ::= ε")
+		return parser.cmds()
 	}
+	// epsilon
+	parser.accumulateRule("<CMDS_REST> ::= ε")
 	return nil
 }
 
@@ -1001,37 +1042,44 @@ func (parser *Parser) id() error {
 // <PARAMETERS> ::= <ID> ':' <TYPE>
 // <PARAMETERS> ::= <ID> ':' <TYPE> <EXTRA_PARAMETERS>
 func (parser *Parser) parameters() error {
-	errSalt := "Parser.parameters"
-	parser.accumulateRule("<PARAMETERS> ::= <ID> ':' <TYPE> | <ID> ':' <TYPE> <EXTRA_PARAMETERS>")
+	parser.accumulateRule("<PARAMETERS> ::= <TYPE> ':' <ID> | <EXTRA_PARAMETERS> <TYPE> ':' <ID>")
 
-	// Due to right-to-left:
-	// First, try to match EXTRA_PARAMETERS if present.
-	if parser.token == TComma { // Check for ',' which starts EXTRA_PARAMETERS
-		if err := parser.extraParameters(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
+	// Handle optional parameters (ε case)
+	if parser.token == TCloseParentheses {
+		parser.accumulateRule("<PARAMETERS> ::= ε")
+		return nil
+	}
+
+	// Try parsing EXTRA_PARAMETERS first
+	for isTypeToken(parser.token) {
+		if err := parser.typeToken(); err != nil {
+			return err
+		}
+		if parser.token != TColon {
+			return parser.handleSyntaxError(fmt.Errorf("expected ':', got %s", parser.lexeme))
+		}
+		if err := parser.advanceToken(); err != nil {
+			return err
+		}
+		if parser.token != TId {
+			return parser.handleSyntaxError(fmt.Errorf("expected ID after ':', got %s", parser.lexeme))
+		}
+		if err := parser.advanceToken(); err != nil {
+			return err
+		}
+		if parser.token != TComma {
+			break // end of param list
+		}
+		if err := parser.advanceToken(); err != nil {
+			return err
 		}
 	}
 
-	// Then, <TYPE>
-	if err := parser.typeToken(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
-	}
-
-	// Then, ':'
-	if parser.token != TColon {
-		return parser.handleSyntaxError(fmt.Errorf(errExpectedColon, parser.lexeme))
-	}
-	parser.displayToken()
-	if err := parser.advanceToken(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
-	}
-
-	// Then, <ID>
-	if err := parser.id(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
-	}
-
 	return nil
+}
+
+func isTypeToken(tok int) bool {
+	return tok == TNil || tok == TGear || tok == TTensor || tok == TState || tok == TMonodrone || tok == TOmnidrone
 }
 
 // extraParameters :
