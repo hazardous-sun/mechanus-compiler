@@ -93,6 +93,10 @@ func (lex *Lexer) NextToken() (int, error) {
 
 	err := lex.collectLexeme()
 
+	if lex.token == TSingleLineComment {
+		_, err = lex.NextToken()
+	}
+
 	if err != nil {
 		err = log.LexerErrorf(errSalt, err)
 		log.LogError(err)
