@@ -9,4 +9,4 @@ the top, and from the left to the right.
 - [Derivation Tree](./docs/derivation_tree.md)
 - [Examples](./docs/examples):
   - [Example 1](./docs/examples/example1_input.mecha)
-  - [Example 2](./docs/examples/example2_input.mecha)
+  - [Example 2](docs/examples/example4_input.mecha)
