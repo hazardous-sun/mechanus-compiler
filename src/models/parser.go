@@ -26,6 +26,7 @@ const (
 	errExpectedOpenParenthesis  = "expected '(', got %s"
 	errExpectedCloseParenthesis = "expected ')', got %s"
 	errExpectedIdentifier       = "expected an identifier, got %s"
+	errExpectedColon            = "expected ':', got %s"
 )
 
 // NewParser :
@@ -609,7 +610,6 @@ func (parser *Parser) cmdFor() error {
 // <CMD_DECLARATION> ::= <E> '=:' <VAR>
 func (parser *Parser) cmdDeclaration() error {
 	errSalt := "Parser.cmdDeclaration"
-	errExpectedColon := "expected ':', got %s"
 	parser.accumulateRule("<CMD_DECLARATION> ::= <E> '=:' <TYPE> ':' <VAR>")
 
 	// Expect <VAR>
@@ -944,7 +944,7 @@ func (parser *Parser) x() error {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 	} else if parser.token == TDoubleQuote { // <STRING> (Omnidrone token is used for strings)
-		if err := parser.string_(); err != nil {
+		if err := parser.stringToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 	} else {
@@ -1039,7 +1039,6 @@ func (parser *Parser) parameters() error {
 // <EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> ',' <PARAMETERS>
 func (parser *Parser) extraParameters() error {
 	errSalt := "Parser.extraParameters"
-	errExpectedColon := "expected ':', got %s"
 	parser.accumulateRule("<EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> | ',' <ID> ':' <TYPE> ',' <PARAMETERS>")
 
 	// If there's a comma, it's a recursive call or a single extra parameter.
