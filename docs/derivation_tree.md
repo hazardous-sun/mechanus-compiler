@@ -7,8 +7,8 @@
 <BODY> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'
 <BODY> ::= <BODY_REST>
 
-<BODY_REST> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' <BODY_REST>
-<BODY_REST> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect' <BODY_REST>
+<BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect'
+<BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'
 <BODY_REST> ::= ε
 
 <TYPE> ::= 'Nil'
@@ -18,7 +18,7 @@
 <TYPE> ::= 'Monodrone'
 <TYPE> ::= 'Omnidrone'
 
-<CMDS> ::= <CMD> <CMDS_REST>
+<CMDS> ::= <CMDS_REST> <CMD>
 
 <CMDS_REST> ::= '\n' <CMDS>
 <CMDS_REST> ::= ε
@@ -30,17 +30,18 @@
 <CMD> ::= <CMD_RECEIVE>
 <CMD> ::= <CMD_SEND>
 
-<CMD_IF> ::= '{' <CMDS> '}' 'if' <CONDITION>
-<CMD_IF> ::= '{' <CMDS> '}' 'else' '{' <CMDS> '}' 'if' <CONDITION>  
-<CMD_IF> ::= <CMD_ELIF> '{' <CMDS> '}' 'if' <CONDITION>
+<CMD_IF> ::= '{' <CMDS> '}' <CONDITION> 'if'
+<CMD_IF> ::= '{' <CMDS> '}' 'else' '{' <CMDS> '}' <CONDITION> 'if'  
+<CMD_IF> ::= <CMD_ELIF> '{' <CMDS> '}' <CONDITION> 'if'
 
-<CMD_ELIF> ::= '{' <CMDS> '}' 'elif' <CONDITION>
+<CMD_ELIF> ::= '{' <CMDS> '}' <CONDITION> 'elif'
 <CMD_ELIF> ::= <CMD_ELIF_REST>
-<CMD_ELIF_REST> ::= '{' <CMDS> '}' 'elif' <CONDITION> <CMD_ELIF_REST>
-<CMD_ELIF_REST> ::= '{' <CMDS> '}' 'else' '{' <CMDS> '}' 'elif' <CONDITION> <CMD_ELIF_REST>
+
+<CMD_ELIF_REST> ::= <CMD_ELIF_REST> '{' <CMDS> '}' <CONDITION> 'elif'
+<CMD_ELIF_REST> ::= '{' <CMDS> '}' 'else' <CMD_ELIF_REST> '{' <CMDS> '}' <CONDITION> 'elif'
 <CMD_ELIF_REST> ::= ε
 
-<CMD_FOR> ::= '{' <CMDS> '}' 'for' <CONDITION>
+<CMD_FOR> ::= '{' <CMDS> '}' <CONDITION> 'for'
 
 <CMD_DECLARATION> ::= <E> '=:' <TYPE> ':' <VAR>
 
@@ -70,7 +71,8 @@
 <T_REST> ::= '%' <F> <T_REST>
 <T_REST> ::= ε
 
-<F> ::= -<F> | <X>
+<F> ::= -<F>
+<F> ::= <X>
 
 <X> ::= '(' <E> ')'
 <X> ::= [0-9]+('.'[0-9]+)
@@ -79,11 +81,11 @@
 
 <STRING> ::= '"' <TEXT_WITH_NUMBERS> '"'
 
-<PARAMETERS> ::= <ID> ':' <TYPE>
-<PARAMETERS> ::= <ID> ':' <TYPE> <EXTRA_PARAMETERS>
+<PARAMETERS> ::= <TYPE> ':' <ID> 
+<PARAMETERS> ::= <EXTRA_PARAMETERS> <TYPE> ':' <ID>
 
-<EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE>
-<EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> ',' <PARAMETERS>
+<EXTRA_PARAMETERS> ::= <TYPE> ':' <ID> ','
+<EXTRA_PARAMETERS> ::= <EXTRA_PARAMETERS> <TYPE> ':' <ID> ','
 
 <ID> ::= (([A-Z]|[a-z])+(_|[0-9])*)+
 
