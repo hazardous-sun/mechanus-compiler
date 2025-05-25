@@ -302,7 +302,7 @@ func (parser *Parser) bodyRest() error {
 // <TYPE> ::= 'Nil' | 'Gear' | 'Tensor' | 'State' | 'Monodrone' | 'Omnidrone'
 func (parser *Parser) typeToken() error {
 	parser.accumulateRule("<TYPE> ::= 'Nil' | 'Gear' | 'Tensor' | 'State' | 'Monodrone' | 'Omnidrone'")
-	if parser.token != TNilValue && parser.token != TGear && parser.token != TTensor &&
+	if parser.token != TNil && parser.token != TGear && parser.token != TTensor &&
 		parser.token != TState && parser.token != TMonodrone && parser.token != TOmnidrone {
 		return parser.handleSyntaxError(fmt.Errorf("expected a Type keyword, got %s", parser.lexeme))
 	}
@@ -1014,8 +1014,23 @@ func (parser *Parser) x() error {
 		if err := parser.stringToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
+	} else if parser.token == TNil {
+		parser.nilToken()
 	} else {
-		return parser.handleSyntaxError(fmt.Errorf("expected '(', a number, an identifier, or a string, got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf("expected '(', a number, an identifier, a string, or Nil, got %s", parser.lexeme))
+	}
+	return nil
+}
+
+func (parser *Parser) nilToken() error {
+	parser.accumulateRule("<NIL> :: 'Nil'")
+
+	if parser.token != TNil {
+		return parser.handleSyntaxError(fmt.Errorf("expected 'Nil', got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1033,7 +1048,7 @@ func (parser *Parser) stringToken() error {
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return err // Propagation of error
+		return err
 	}
 	return nil
 }
@@ -1055,7 +1070,7 @@ func (parser *Parser) varToken() error {
 func (parser *Parser) id() error {
 	parser.accumulateRule("<ID> ::= (([A-Z]|[a-z])+(_|[0-9])*)+")
 	if parser.token != TId {
-		return parser.handleSyntaxError(fmt.Errorf("expected an Identifier, got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf(errExpectedIdentifier, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {

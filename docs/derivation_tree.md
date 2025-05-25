@@ -80,9 +80,12 @@
 <X> ::= '(' <E> ')'
 <X> ::= [0-9]+('.'[0-9]+)
 <X> ::= <STRING>
+<X> ::= <NIL>
 <X> ::= <VAR>
 
 <STRING> ::= '"' <TEXT_WITH_NUMBERS> '"'
+
+<NIL> ::= 'Nil'
 
 <PARAMETERS> ::= <TYPE> ':' <ID> 
 <PARAMETERS> ::= <EXTRA_PARAMETERS> <TYPE> ':' <ID>
