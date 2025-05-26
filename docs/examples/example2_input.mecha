@@ -1,9 +1,10 @@
 {
 
    {
-        1 Integrate
-        (x - 1)test
-         x <= 2 if
+        {
+            1 Integrate
+            (x - 1)test
+        } x <= 2 if
    } (Gear :x)test Architect
 
    {
