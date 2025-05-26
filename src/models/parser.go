@@ -338,7 +338,7 @@ func (parser *Parser) cmds() error {
 			}
 		}
 
-		// If we hit '{', we're done with <CMDS>
+		// At this level, hitting '{' means the parser is done with <CMDS>
 		if parser.token == TOpenBraces {
 			break
 		}
@@ -383,7 +383,6 @@ func (parser *Parser) cmd() error {
 	errSalt := "Parser.cmd"
 	parser.accumulateRule("<CMD> ::= <CMD_IF> | <CMD_FOR> | <CMD_DECLARATION> | <CMD_ASSIGNMENT> | <CMD_RECEIVE> | <CMD_SEND> | <CMD_INTEGRATE> | <CMD_CALL>")
 
-	// Try each recognized command rule in reverse order
 	if err := parser.cmdIf(); err == nil {
 		return nil
 	}
@@ -414,20 +413,6 @@ func (parser *Parser) cmd() error {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 
-		// Expect opening parenthesis
-		//if parser.token != TOpenParentheses {
-		//	return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
-		//}
-		//parser.displayToken()
-		//if err := parser.advanceToken(); err != nil {
-		//	return log.SyntaxErrorf(errSalt, err)
-		//}
-		//
-		//// Expect the function name ID
-		//if parser.token != TId {
-		//	return parser.handleSyntaxError(fmt.Errorf("expected function name (ID), got %s", parser.lexeme))
-		//}
-		//parser.displayToken()
 		return nil
 	}
 
@@ -915,17 +900,12 @@ func (parser *Parser) condition() error {
 	if err := parser.e(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
-	//parser.displayToken()
-	//if err := parser.advanceToken(); err != nil {
-	//	return log.SyntaxErrorf(errSalt, err)
-	//}
 
 	return nil
 }
 
-// e :
-// <E> ::= <T> <E_REST>
-// <E_REST> ::= '+' <T> <E_REST> | '-' <T> <E_REST> | ε
+// <E> :
+// <E> ::= <E_REST> <T>
 func (parser *Parser) e() error {
 	errSalt := "Parser.e"
 	parser.accumulateRule("<E> ::= <T> <E_REST>")
@@ -937,7 +917,9 @@ func (parser *Parser) e() error {
 }
 
 // eRest :
-// <E_REST> ::= <E_REST> '+' <T> | <E_REST> '-' <T> | ε
+// <E_REST> ::= <E_REST> '+' <T>
+// <E_REST> ::= <E_REST> '-' <T>
+// <E_REST> ::= ε
 func (parser *Parser) eRest() error {
 	errSalt := "Parser.eRest"
 
@@ -1060,12 +1042,6 @@ func (parser *Parser) x() error {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 
-		//// After param list, expect function name (identifier)
-		//if parser.token != TId {
-		//	return parser.handleSyntaxError(fmt.Errorf("expected function name ID after parameters, got %s", parser.lexeme))
-		//}
-		//parser.displayToken()
-		//return parser.advanceToken()
 		return nil
 	}
 
@@ -1092,8 +1068,8 @@ func (parser *Parser) nilToken() error {
 func (parser *Parser) stringToken() error {
 	parser.accumulateRule("<STRING> ::= '\"' <TEXT_WITH_NUMBERS> '\"'")
 
-	// The lexer identifies the entire string literal (including quotes) as TOmnidrone.
-	// So, we just need to consume the TOmnidrone token here.
+	// The lexer identifies the entire string literal (including quotes) as TDoubleQuote.
+	// So, the parser just needs to consume the TDoubleQuote
 	if parser.token != TDoubleQuote {
 		return parser.handleSyntaxError(fmt.Errorf("expected a string literal, got %s", parser.lexeme))
 	}
@@ -1142,7 +1118,7 @@ func (parser *Parser) parametersDecl() error {
 	errSalt := "Parser.parametersDecl"
 	parser.accumulateRule("<PARAMETERS> ::= <EXTRA_PARAMETERS> <TYPE> ':' <ID> | <TYPE> ':' <ID>")
 
-	// 1. Expect ID (rightmost identifier in the parameter list)
+	// Expect ID (rightmost identifier in the parameter list)
 	if parser.token != TId {
 		return parser.handleSyntaxError(fmt.Errorf("expected parameter ID, got %s", parser.lexeme))
 	}
@@ -1151,7 +1127,7 @@ func (parser *Parser) parametersDecl() error {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// 2. Expect ':'
+	// Expect ':'
 	if parser.token != TColon {
 		return parser.handleSyntaxError(fmt.Errorf("expected ':', got %s", parser.lexeme))
 	}
@@ -1160,12 +1136,12 @@ func (parser *Parser) parametersDecl() error {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// 3. Expect <TYPE>
+	// Expect <TYPE>
 	if err := parser.typeToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// 4. Loop to check for extra parametersDecl (reverse order)
+	// Loop to check for extra parametersDecl (reverse order)
 	for parser.token == TComma {
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
@@ -1238,49 +1214,13 @@ func (parser *Parser) extraParameters() error {
 
 	// If there's a comma, it's a recursive call or a single extra parameter.
 	if parser.token == TComma {
-		// Handle the ',' <PARAMETERS> part first if present, then ',' <ID> ':' <TYPE>
-		// This needs careful handling for right-to-left.
-
 		// Consume the ','
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 
-		// Check if it's ',' <PARAMETERS> or just ',' <ID> ':' <TYPE>
-		// The grammar is ambiguous here for simple lookahead based on "right to left",
-		// but since the original parsing was recursive descent, it implies a certain
-		// backtracking or lookahead capability. Given the new instruction:
-		// <EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> <EXTRA_PARAMETERS> (implicitly, if the next is also a comma)
-		// <EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE>
-
-		// To be truly right-to-left:
-		// First parse <PARAMETERS> if the next token is a comma.
-		// Then parse <TYPE>.
-		// Then parse ':'.
-		// Then parse <ID>.
-		// Then parse ','.
-
-		// This recursive descent implementation will just match the next components.
-		// It expects: <TYPE>, then ':', then <ID>, then (optionally) a recursive call to extraParameters followed by a comma.
-
-		// Parse <PARAMETERS> if it's the recursive rule: ',' <ID> ':' <TYPE> ',' <PARAMETERS>
-		// This is tricky with current token, as <PARAMETERS> starts with <ID>.
-		// Assuming the token stream reflects the right-to-left order, the parser would have
-		// already seen the innermost <PARAMETERS> if it was a recursive definition.
-
-		// Let's assume the recursive definition implies: (..., ID : TYPE), (..., ID : TYPE)
-		// So we look for ID : TYPE and then decide if another comma makes it recursive.
-
-		// Due to "bottom to top, right to left":
-		// <EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE>
-		// <EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> ',' <PARAMETERS>
-
-		// This is likely: parse the ID, then :, then TYPE. If there's another comma after that, then
-		// it's the recursive rule, and we call extraParameters again.
-
-		// Try to match the elements of the rule from right to left
-		// So first look for <TYPE>
+		// Check for <TYPE>
 		if err := parser.typeToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
@@ -1299,22 +1239,19 @@ func (parser *Parser) extraParameters() error {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 
-		// After matching `ID : TYPE`, if the next token is also a `TComma`, then we recursively call `extraParameters`.
+		// After matching `ID : TYPE`, if the next token is also a `TComma`, then recursively call `extraParameters`.
 		if parser.token == TComma {
 			// Consume the comma for the recursive call
 			parser.displayToken()
 			if err := parser.advanceToken(); err != nil {
 				return log.SyntaxErrorf(errSalt, err)
 			}
-			if err := parser.parametersDecl(); err != nil { // Call parametersDecl, as EXTRA_PARAMETERS can have a full PARAMETERS on its right.
+			if err := parser.parametersDecl(); err != nil {
 				return log.SyntaxErrorf(errSalt, err)
 			}
 		}
 
 	} else {
-		// This should not happen if extraParameters was called due to a comma.
-		// This means that the outer `parametersDecl` method needs to handle the choice
-		// of calling `extraParameters` or not based on lookahead.
 		return parser.handleSyntaxError(fmt.Errorf("expected ',', got %s for extraParameters", parser.lexeme))
 	}
 	return nil
