@@ -132,11 +132,12 @@ func (parser *Parser) g() error {
 	return nil
 }
 
-// <BODY> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect'
+// <BODY> :
 //
-//	| <BODY_REST> '{' <CMDS> '}' '(' ')' <ID> 'Architect'
-//	| <BODY_REST> '{' <CMDS> '}' <TYPE> '(' ')' <ID> 'Architect'
-//	| <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'
+// <BODY> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS_DECL> ')' <ID> 'Architect'
+// <BODY> ::= <BODY_REST> '{' <CMDS> '}' '(' ')' <ID> 'Architect'
+// <BODY> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' ')' <ID> 'Architect'
+// <BODY> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS_DECL> ')' <ID> 'Architect'
 func (parser *Parser) body() error {
 	errSalt := "Parser.body"
 	parser.accumulateRule("<BODY> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' | ...")
@@ -219,9 +220,10 @@ func (parser *Parser) body() error {
 	return nil
 }
 
-// bodyRest :
-// <BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect'
-// <BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'
+// <BODY_REST> :
+//
+// <BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS_DECL> ')' <ID> 'Architect'
+// <BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS_DECL> ')' <ID> 'Architect'
 // <BODY_REST> ::= ε
 func (parser *Parser) bodyRest() error {
 	errSalt := "Parser.bodyRest"
@@ -301,8 +303,14 @@ func (parser *Parser) bodyRest() error {
 	return parser.bodyRest()
 }
 
-// typeToken :
-// <TYPE> ::= 'Nil' | 'Gear' | 'Tensor' | 'State' | 'Monodrone' | 'Omnidrone'
+// <TYPE> :
+//
+// <TYPE> ::= 'Nil'
+// <TYPE> ::= 'Gear'
+// <TYPE> ::= 'Tensor'
+// <TYPE> ::= 'State'
+// <TYPE> ::= 'Monodrone'
+// <TYPE> ::= 'Omnidrone'
 func (parser *Parser) typeToken() error {
 	parser.accumulateRule("<TYPE> ::= 'Nil' | 'Gear' | 'Tensor' | 'State' | 'Monodrone' | 'Omnidrone'")
 	if parser.token != TNil && parser.token != TGear && parser.token != TTensor &&
@@ -316,8 +324,8 @@ func (parser *Parser) typeToken() error {
 	return nil
 }
 
-// cmds :
-// <CMDS> ::= <CMD> <CMDS_REST>
+// <CMDS> :
+// <CMDS> ::= <CMDS_REST> <CMD>
 func (parser *Parser) cmds() error {
 	parser.accumulateRule("<CMDS> ::= <CMDS_REST> <CMD>")
 
@@ -344,8 +352,10 @@ func (parser *Parser) cmds() error {
 	return nil
 }
 
-// cmdsRest :
-// <CMDS_REST> ::= '\n' <CMDS> | ε
+// <CMDS_REST> :
+//
+// <CMDS_REST> ::= '\n' <CMDS>
+// <CMDS_REST> ::= ε
 func (parser *Parser) cmdsRest() error {
 	parser.accumulateRule("<CMDS_REST> ::= '\\n' <CMDS> | ε")
 
@@ -360,8 +370,15 @@ func (parser *Parser) cmdsRest() error {
 	return nil
 }
 
-// cmd :
-// <CMD> ::= <CMD_IF> | <CMD_FOR> | <CMD_DECLARATION> | <CMD_ASSIGNMENT> | <CMD_RECEIVE> | <CMD_SEND> | <CMD_CALL>
+// <CMD> :
+//
+// <CMD> ::= <CMD_IF>
+// <CMD> ::= <CMD_FOR>
+// <CMD> ::= <CMD_DECLARATION>
+// <CMD> ::= <CMD_ASSIGNMENT>
+// <CMD> ::= <CMD_RECEIVE>
+// <CMD> ::= <CMD_SEND>
+// <CMD> ::= <CMD_INTEGRATE>
 func (parser *Parser) cmd() error {
 	errSalt := "Parser.cmd"
 	parser.accumulateRule("<CMD> ::= <CMD_IF> | <CMD_FOR> | <CMD_DECLARATION> | <CMD_ASSIGNMENT> | <CMD_RECEIVE> | <CMD_SEND> | <CMD_INTEGRATE> | <CMD_CALL>")
@@ -418,18 +435,15 @@ func (parser *Parser) cmd() error {
 	return parser.handleSyntaxError(fmt.Errorf("unrecognized command starting with token %s", parser.lexeme))
 }
 
-// cmdIf :
-// <CMD_IF> ::= '{' <CMDS> '}' 'if' <CONDITION>
-// <CMD_IF> ::= '{' <CMDS> '}' 'else' '{' <CMDS> '}' 'if' <CONDITION>
-// <CMD_IF> ::= <CMD_ELIF> '{' <CMDS> '}' 'if' <CONDITION>
+// <CMD_IF> :
+//
+// <CMD_IF> ::= '{' <CMDS> '}' <CONDITION> 'if'
+// <CMD_IF> ::= '{' <CMDS> '}' 'else' '{' <CMDS> '}' <CONDITION> 'if'
+// <CMD_IF> ::= <CMD_ELIF> '{' <CMDS> '}' <CONDITION> 'if'
 func (parser *Parser) cmdIf() error {
 	errSalt := "Parser.cmdIf"
 	parser.accumulateRule("<CMD_IF> ::= '{' <CMDS> '}' 'if' <CONDITION> | '{' <CMDS> '}' 'else' '{' <CMDS> '}' 'if' <CONDITION> | <CMD_ELIF> '{' <CMDS> '}' 'if' <CONDITION>")
 
-	// Due to right-to-left, bottom-to-top, check for 'if' and then the condition.
-	// Then look for the commands and braces that follow.
-
-	// All CMD_IF rules end with 'if' <CONDITION>
 	// Expect 'if'
 	if parser.token != TIf {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'if', got %s", parser.lexeme))
@@ -442,13 +456,6 @@ func (parser *Parser) cmdIf() error {
 	// Expect <CONDITION>
 	if err := parser.condition(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
-	}
-
-	// Scenario 1: <CMD_ELIF>
-	if parser.token == TElif {
-		if err := parser.cmdElif(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
 	}
 
 	// Expect '}'
@@ -472,6 +479,13 @@ func (parser *Parser) cmdIf() error {
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// Check for 'elif'
+	for parser.token == TElif {
+		if err := parser.cmdElif(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
+		}
 	}
 
 	// Check for 'else'
@@ -505,8 +519,9 @@ func (parser *Parser) cmdIf() error {
 	return nil
 }
 
-// cmdElif :
-// <CMD_ELIF> ::= '{' <CMDS> '}' 'elif' <CONDITION>
+// <CMD_ELIF> :
+//
+// <CMD_ELIF> ::= '{' <CMDS> '}' <CONDITION> 'elif'
 // <CMD_ELIF> ::= <CMD_ELIF_REST>
 func (parser *Parser) cmdElif() error {
 	errSalt := "Parser.cmdElif"
@@ -554,9 +569,10 @@ func (parser *Parser) cmdElif() error {
 	return nil
 }
 
-// cmdElifRest :
-// <CMD_ELIF_REST> ::= '{' <CMDS> '}' 'elif' <CONDITION> <CMD_ELIF_REST>
-// <CMD_ELIF_REST> ::= '{' <CMDS> '}' 'else' '{' <CMDS> '}' 'elif' <CONDITION> <CMD_ELIF_REST>
+// <CMD_ELIF_REST> :
+//
+// <CMD_ELIF_REST> ::= <CMD_ELIF_REST> '{' <CMDS> '}' <CONDITION> 'elif'
+// <CMD_ELIF_REST> ::= '{' <CMDS> '}' 'else' <CMD_ELIF_REST> '{' <CMDS> '}' <CONDITION> 'elif'
 // <CMD_ELIF_REST> ::= ε
 func (parser *Parser) cmdElifRest() error {
 	errSalt := "Parser.cmdElifRest"
@@ -638,8 +654,8 @@ func (parser *Parser) cmdElifRest() error {
 	return nil
 }
 
-// cmdFor :
-// <CMD_FOR> ::= '{' <CMDS> '}' 'for' <CONDITION>
+// <CMD_FOR> :
+// <CMD_FOR> ::= '{' <CMDS> '}' <CONDITION> 'for'
 func (parser *Parser) cmdFor() error {
 	errSalt := "Parser.cmdFor"
 	parser.accumulateRule("<CMD_FOR> ::= '{' <CMDS> '}' <CONDITION> 'for'")
@@ -684,6 +700,9 @@ func (parser *Parser) cmdFor() error {
 	return nil
 }
 
+// <CMD_INTEGRATE> :
+//
+// <CMD_INTEGRATE> ::= <E> 'Integrate'
 func (parser *Parser) cmdIntegrate() error {
 	errSalt := "Parser.cmdIntegrate"
 	parser.accumulateRule("<CMD_INTEGRATE> ::= <E> 'Integrate'")
@@ -705,8 +724,9 @@ func (parser *Parser) cmdIntegrate() error {
 	return nil
 }
 
-// cmdDeclaration :
-// <CMD_DECLARATION> ::= <E> '=:' <VAR>
+// <CMD_DECLARATION> :
+//
+// <CMD_DECLARATION> ::= <E> '=:' <TYPE> ':' <VAR>
 func (parser *Parser) cmdDeclaration() error {
 	errSalt := "Parser.cmdDeclaration"
 	parser.accumulateRule("<CMD_DECLARATION> ::= <E> '=:' <TYPE> ':' <VAR>")
@@ -747,7 +767,8 @@ func (parser *Parser) cmdDeclaration() error {
 	return nil
 }
 
-// cmdAssignment :
+// <CMD_ASSIGNMENT> :
+//
 // <CMD_ASSIGNMENT> ::= <E> '=' <VAR>
 func (parser *Parser) cmdAssignment() error {
 	errSalt := "Parser.cmdAssignment"
@@ -775,7 +796,8 @@ func (parser *Parser) cmdAssignment() error {
 	return nil
 }
 
-// cmdReceive :
+// <CMD_RECEIVE> :
+//
 // <CMD_RECEIVE> ::= '(' <VAR> ')' 'Receive'
 func (parser *Parser) cmdReceive() error {
 	errSalt := "Parser.cmdReceive"
@@ -816,7 +838,8 @@ func (parser *Parser) cmdReceive() error {
 	return nil
 }
 
-// cmdSend :
+// <CMD_SEND> :
+//
 // <CMD_SEND> ::= '(' <E> ')' 'Send'
 func (parser *Parser) cmdSend() error {
 	parser.accumulateRule("<CMD_SEND> ::= '(' <E> ')' 'Send'")
@@ -856,8 +879,14 @@ func (parser *Parser) cmdSend() error {
 	return nil
 }
 
-// condition :
-// <CONDITION> ::= <E> '>' <E> | <E> '>=' <E> | <E> '<>' <E> | <E> '<=' <E> | <E> '<' <E> | <E> '==' <E>
+// <CONDITION> :
+//
+// <CONDITION> ::= <E> '>' <E>
+// <CONDITION> ::= <E> '>=' <E>
+// <CONDITION> ::= <E> '<>' <E>
+// <CONDITION> ::= <E> '<=' <E>
+// <CONDITION> ::= <E> '<' <E>
+// <CONDITION> ::= <E> '==' <E>
 func (parser *Parser) condition() error {
 	errSalt := "Parser.condition"
 	parser.accumulateRule("<CONDITION> ::= <E> '>' <E> | <E> '>=' <E> | <E> '<>' <E> | <E> '<=' <E> | <E> '<' <E> | <E> '==' <E>")

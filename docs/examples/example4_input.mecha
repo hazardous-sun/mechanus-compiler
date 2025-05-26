@@ -1,0 +1,24 @@
+{
+
+   {
+        {
+            3 Integrate
+            (x - 3)test
+        } else {
+            2 Integrate
+            (x - 2)test
+        } x <= 10 elif {
+            1 Integrate
+        } x <= 2 if
+        (y)Send
+   } (Tensor :y, Gear :x)test Architect
+
+   {
+        0 Integrate
+        (text)Send
+        "Hello, world!" =: Omnidrone :text
+   } ()main Architect
+
+   this is an inline comment //
+
+} main Construct

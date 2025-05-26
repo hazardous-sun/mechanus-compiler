@@ -62,10 +62,10 @@
 <CONDITION> ::= <E> '<' <E> 
 <CONDITION> ::= <E> '==' <E>
 
-<E> ::= <T> <E_REST>
+<E> ::= <E_REST> <T>
 
-<E_REST> ::= '+' <T> <E_REST>
-<E_REST> ::= '-' <T> <E_REST>
+<E_REST> ::= <E_REST> '+' <T> 
+<E_REST> ::= <E_REST> '-' <T>
 <E_REST> ::= ε
 
 <T> ::= <F> <T_REST>
