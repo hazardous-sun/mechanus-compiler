@@ -15,6 +15,13 @@ This repository contains:
 - A formal grammar definition (derivation tree).
 - A script to compile all examples in one go.
 
+### 📌 Project Status
+
+- ✅ **Lexer**: Fully implemented — tokenizes input source code.
+- ✅ **Syntax Analyzer**: Fully implemented — validates syntax using a recursive-descent parser.
+- 🔄 **Semantic Analyzer**: *In progress* — under development to validate meaning and context.
+- ⏳ **Code Generation**: *Coming soon* — will emit target code from validated AST.
+
 ---
 
 ## 🧷 Keywords
