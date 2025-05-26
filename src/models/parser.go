@@ -958,8 +958,7 @@ func (parser *Parser) eRest() error {
 	}
 }
 
-// t :
-// <T> ::= <T_REST> <F>
+// <T> :
 func (parser *Parser) t() error {
 	errSalt := "Parser.t"
 	parser.accumulateRule("<T> ::= <F> <T_REST>")
@@ -971,8 +970,7 @@ func (parser *Parser) t() error {
 	return parser.tRest()
 }
 
-// tRest :
-// <T_REST> ::= '*' <F> <T_REST> | '/' <F> <T_REST> | '%' <F> <T_REST> | ε
+// <T_REST>
 func (parser *Parser) tRest() error {
 	errSalt := "Parser.tRest"
 
@@ -993,8 +991,7 @@ func (parser *Parser) tRest() error {
 	}
 }
 
-// f :
-// <F> ::= -<F> | <X>
+// <F>
 func (parser *Parser) f() error {
 	errSalt := "Parser.f"
 	parser.accumulateRule("<F> ::= -<F> | <X>")
@@ -1016,14 +1013,6 @@ func (parser *Parser) f() error {
 }
 
 // <X> :
-//
-// <X> ::= '(' <E> ')'             		 // expression in parentheses
-//
-//	| [0-9]+('.'[0-9]+)        		 // numeric literal
-//	| <STRING>                 		 // string literal
-//	| <NIL>                    		 // the literal 'Nil'
-//	| <VAR>                           // a variable identifier
-//	| '(' <PARAMETERS_CALL> ')' <ID>  // function call
 func (parser *Parser) x() error {
 	errSalt := "Parser.x"
 	parser.accumulateRule("<X> ::= '(' <E> ')' | [0-9]+('.'[0-9]+) | <STRING> | <NIL> | <VAR> | '(' <PARAMETERS_CALL> ')' <ID>")
@@ -1097,9 +1086,9 @@ func (parser *Parser) nilToken() error {
 	return nil
 }
 
-// stringToken :
+// <STRING> :
+//
 // <STRING> ::= '"' <TEXT_WITH_NUMBERS> '"'
-// Note: TEXT_WITH_NUMBERS is implicitly handled by the Lexer as part of TOmnidrone.
 func (parser *Parser) stringToken() error {
 	parser.accumulateRule("<STRING> ::= '\"' <TEXT_WITH_NUMBERS> '\"'")
 
@@ -1115,7 +1104,8 @@ func (parser *Parser) stringToken() error {
 	return nil
 }
 
-// varToken :
+// <VAR> :
+//
 // <VAR> ::= <ID>
 func (parser *Parser) varToken() error {
 	errSalt := "Parser.varToken"
@@ -1127,7 +1117,8 @@ func (parser *Parser) varToken() error {
 	return nil
 }
 
-// id :
+// <ID> :
+//
 // <ID> ::= (([A-Z]|[a-z])+(_|[0-9])*)+
 func (parser *Parser) id() error {
 	parser.accumulateRule("<ID> ::= (([A-Z]|[a-z])+(_|[0-9])*)+")
@@ -1237,11 +1228,8 @@ func (parser *Parser) parametersCall() error {
 	return nil
 }
 
-func isTypeToken(tok int) bool {
-	return tok == TNil || tok == TGear || tok == TTensor || tok == TState || tok == TMonodrone || tok == TOmnidrone
-}
-
-// extraParameters :
+// <EXTRA_PARAMETERS> :
+//
 // <EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE>
 // <EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> ',' <PARAMETERS>
 func (parser *Parser) extraParameters() error {
