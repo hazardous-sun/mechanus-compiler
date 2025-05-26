@@ -1294,7 +1294,7 @@ func (parser *Parser) handleSyntaxError(err error) error {
 	if parser.errorMessage == nil {
 		parser.errorMessage = log.SyntaxErrorf(log.SyntaxError,
 			fmt.Errorf("%s at %s", err.Error(), parser.lexer.DisplayPos()))
-		log.LogError(parser.errorMessage)
+		//log.LogError(parser.errorMessage)
 	}
 	return parser.errorMessage
 }
