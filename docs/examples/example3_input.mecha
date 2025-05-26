@@ -1,0 +1,19 @@
+{
+
+   {
+        {
+            1 Integrate
+            (x - 1)test
+        } x <= 2 if
+        (y)Send
+   } (Tensor :y, Gear :x)test Architect
+
+   {
+        0 Integrate
+        (text)Send
+        "Hello, world!" =: Omnidrone :text
+   } ()main Architect
+
+   this is an inline comment //
+
+} main Construct
