@@ -170,7 +170,7 @@ func (parser *Parser) body() error {
 
 	// 4. Optionally parse <PARAMETERS> (may be ε)
 	if parser.token != TOpenParentheses {
-		_ = parser.parameters() // fail silently if no parameters
+		_ = parser.parametersDecl() // fail silently if no parametersDecl
 	}
 
 	// 5. Expect '('
@@ -262,7 +262,7 @@ func (parser *Parser) bodyRest() error {
 
 	// 5. Optionally parse <PARAMETERS>
 	if parser.token != TOpenParentheses {
-		_ = parser.parameters() // fails silently if epsilon
+		_ = parser.parametersDecl() // fails silently if epsilon
 	}
 
 	// 6. Expect '('
@@ -361,33 +361,62 @@ func (parser *Parser) cmdsRest() error {
 }
 
 // cmd :
-// <CMD> ::= <CMD_IF> | <CMD_FOR> | <CMD_DECLARATION> | <CMD_ASSIGNMENT> | <CMD_RECEIVE> | <CMD_SEND>
+// <CMD> ::= <CMD_IF> | <CMD_FOR> | <CMD_DECLARATION> | <CMD_ASSIGNMENT> | <CMD_RECEIVE> | <CMD_SEND> | <CMD_CALL>
 func (parser *Parser) cmd() error {
-	parser.accumulateRule("<CMD> ::= <CMD_IF> | <CMD_FOR> | <CMD_DECLARATION> | <CMD_ASSIGNMENT> | <CMD_RECEIVE> | <CMD_SEND>")
+	errSalt := "Parser.cmd"
+	parser.accumulateRule("<CMD> ::= <CMD_IF> | <CMD_FOR> | <CMD_DECLARATION> | <CMD_ASSIGNMENT> | <CMD_RECEIVE> | <CMD_SEND> | <CMD_INTEGRATE> | <CMD_CALL>")
 
-	// Decision based on current token
-	switch parser.token {
-	case TSend:
-		return parser.cmdSend()
-	case TReceive:
-		return parser.cmdReceive()
-	case TIf:
-		return parser.cmdIf()
-	case TFor:
-		return parser.cmdFor()
-	case TIntegrate:
-		return parser.cmdIntegrate()
+	// Try each recognized command rule in reverse order
+	if err := parser.cmdIf(); err == nil {
+		return nil
 	}
-
-	// Now attempt more generic commands
+	if err := parser.cmdFor(); err == nil {
+		return nil
+	}
 	if err := parser.cmdDeclaration(); err == nil {
 		return nil
 	}
 	if err := parser.cmdAssignment(); err == nil {
 		return nil
 	}
+	if err := parser.cmdReceive(); err == nil {
+		return nil
+	}
+	if err := parser.cmdSend(); err == nil {
+		return nil
+	}
+	if err := parser.cmdIntegrate(); err == nil {
+		return nil
+	}
 
-	return parser.handleSyntaxError(fmt.Errorf("unknown command or malformed syntax at %s", parser.lexeme))
+	// ✅ NEW: check for a function call command: (<PARAMETERS_CALL>) <ID>
+	if parser.token == TCloseParentheses {
+		parser.accumulateRule("<CMD_CALL> ::= '(' <PARAMETERS_CALL> ')' <ID>")
+
+		// Parse parameters
+		if err := parser.parametersCall(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
+		}
+
+		// Expect opening parenthesis
+		if parser.token != TOpenParentheses {
+			return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
+		}
+		parser.displayToken()
+		if err := parser.advanceToken(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
+		}
+
+		// Expect the function name ID
+		if parser.token != TId {
+			return parser.handleSyntaxError(fmt.Errorf("expected function name (ID), got %s", parser.lexeme))
+		}
+		parser.displayToken()
+		return parser.advanceToken()
+	}
+
+	// If no command matches, it's a syntax error
+	return parser.handleSyntaxError(fmt.Errorf("unrecognized command starting with token %s", parser.lexeme))
 }
 
 // cmdIf :
@@ -873,96 +902,67 @@ func (parser *Parser) e() error {
 	errSalt := "Parser.e"
 	parser.accumulateRule("<E> ::= <T> <E_REST>")
 
-	// For right-to-left, left-recursive rules like <E> ::= <E> + <T> (or <T> <E_REST>),
-	// we will parse the E_REST part first if it's there.
-	// Since the grammar is given as <E> ::= <T> <E_REST>, we parse <E_REST> first, then <T>.
-	// This implies a non-standard recursive descent for typical left-recursive rules, but
-	// given the right-to-left instruction, it makes sense.
-
-	if err := parser.eRest(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
-	}
-
 	if err := parser.t(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
-
-	return nil
+	return parser.eRest()
 }
 
 // eRest :
-// <E_REST> ::= '+' <T> <E_REST> | '-' <T> <E_REST> | ε
+// <E_REST> ::= <E_REST> '+' <T> | <E_REST> '-' <T> | ε
 func (parser *Parser) eRest() error {
 	errSalt := "Parser.eRest"
-	parser.accumulateRule("<E_REST> ::= '+' <T> <E_REST> | '-' <T> <E_REST> | ε")
 
-	// If the current token is '+' or '-', then it's not epsilon.
-	if parser.token == TAdditionOperator || parser.token == TSubtractionOperator {
-		// Recursive call for E_REST first
-		if err := parser.eRest(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
-
-		// Then <T>
-		if err := parser.t(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
-
-		// Then the operator
+	switch parser.token {
+	case TAdditionOperator, TSubtractionOperator:
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
-	} else {
+		if err := parser.t(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
+		}
+		return parser.eRest() // recursive continuation
+	default:
+		// ε-production matched — stop parsing this rule
 		parser.accumulateRule("<E_REST> ::= ε")
+		return nil
 	}
-	return nil
 }
 
 // t :
-// <T> ::= <F> <T_REST>
-// <T_REST> ::= '*' <F> <T_REST> | '/' <F> <T_REST> | '%' <F> <T_REST> | ε
+// <T> ::= <T_REST> <F>
 func (parser *Parser) t() error {
 	errSalt := "Parser.t"
 	parser.accumulateRule("<T> ::= <F> <T_REST>")
-
-	if err := parser.tRest(); err != nil {
-		return log.SyntaxErrorf(errSalt, err)
-	}
 
 	if err := parser.f(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	return nil
+	return parser.tRest()
 }
 
 // tRest :
 // <T_REST> ::= '*' <F> <T_REST> | '/' <F> <T_REST> | '%' <F> <T_REST> | ε
 func (parser *Parser) tRest() error {
 	errSalt := "Parser.tRest"
-	parser.accumulateRule("<T_REST> ::= '*' <F> <T_REST> | '/' <F> <T_REST> | '%' <F> <T_REST> | ε")
 
-	if parser.token == TMultiplicationOperator || parser.token == TDivisionOperator || parser.token == TModuleOperator {
-		// Recursive call for T_REST first
-		if err := parser.tRest(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
-
-		// Then <F>
-		if err := parser.f(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
-
-		// Then the operator
+	switch parser.token {
+	case TMultiplicationOperator, TDivisionOperator, TModuleOperator:
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
-	} else {
+		if err := parser.f(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
+		}
+		return parser.tRest() // recursive continuation
+	default:
+		// ε-production matched — stop
 		parser.accumulateRule("<T_REST> ::= ε")
+		return nil
 	}
-	return nil
 }
 
 // f :
@@ -987,46 +987,72 @@ func (parser *Parser) f() error {
 	return nil
 }
 
-// x :
-// <X> ::= '(' <E> ')' | [0-9]+('.'[0-9]+) | <VAR> | <STRING>
+// <X> :
+//
+// <X> ::= '(' <E> ')'             		 // expression in parentheses
+//
+//	| [0-9]+('.'[0-9]+)        		 // numeric literal
+//	| <STRING>                 		 // string literal
+//	| <NIL>                    		 // the literal 'Nil'
+//	| <VAR>                           // a variable identifier
+//	| '(' <PARAMETERS_CALL> ')' <ID>  // function call
 func (parser *Parser) x() error {
 	errSalt := "Parser.x"
-	parser.accumulateRule("<X> ::= '(' <E> ')' | [0-9]+('.'[0-9]+) | <VAR> | <STRING>")
+	parser.accumulateRule("<X> ::= '(' <E> ')' | [0-9]+('.'[0-9]+) | <STRING> | <NIL> | <VAR> | '(' <PARAMETERS_CALL> ')' <ID>")
 
-	if parser.token == TOpenParentheses { // '(' <E> ')'
+	switch parser.token {
+
+	// Case: STRING literal
+	case TDoubleQuote:
+		parser.displayToken()
+		return parser.advanceToken()
+
+	// Case: NIL
+	case TNil:
+		parser.displayToken()
+		return parser.advanceToken()
+
+	// Case: numeric literal (integer or float)
+	case TGear, TTensor:
+		parser.displayToken()
+		return parser.advanceToken()
+
+	// Case: identifier (variable or function call)
+	case TId:
+		parser.displayToken()
+		return parser.advanceToken()
+
+	// Case: open parentheses — could be (E) or (PARAMS_CALL) ID
+	case TCloseParentheses:
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
-		if err := parser.e(); err != nil {
+
+		// Try to parse parametersCall (supports multiple expressions)
+		if err := parser.parametersCall(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
-		if parser.token != TCloseParentheses {
-			return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseParenthesis, parser.lexeme))
+
+		// Expect matching opening parenthesis
+		if parser.token != TOpenParentheses {
+			return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
-	} else if parser.token == TGear || parser.token == TTensor { // [0-9]+('.'[0-9]+) (numbers)
+
+		// After param list, expect function name (identifier)
+		if parser.token != TId {
+			return parser.handleSyntaxError(fmt.Errorf("expected function name ID after parameters, got %s", parser.lexeme))
+		}
 		parser.displayToken()
-		if err := parser.advanceToken(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
-	} else if parser.token == TId { // <VAR> (which is <ID>)
-		if err := parser.varToken(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
-	} else if parser.token == TDoubleQuote { // <STRING> (Omnidrone token is used for strings)
-		if err := parser.stringToken(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
-	} else if parser.token == TNil {
-		parser.nilToken()
-	} else {
-		return parser.handleSyntaxError(fmt.Errorf("expected '(', a number, an identifier, a string, or Nil, got %s", parser.lexeme))
+		return parser.advanceToken()
 	}
-	return nil
+
+	// If no valid rule matches, return error
+	return parser.handleSyntaxError(fmt.Errorf("unexpected token in <X>: %s", parser.lexeme))
 }
 
 func (parser *Parser) nilToken() error {
@@ -1086,11 +1112,14 @@ func (parser *Parser) id() error {
 	return nil
 }
 
-// parameters :
-// <PARAMETERS> ::= <ID> ':' <TYPE>
-// <PARAMETERS> ::= <ID> ':' <TYPE> <EXTRA_PARAMETERS>
-func (parser *Parser) parameters() error {
-	errSalt := "Parser.parameters"
+// <PARAMETERS_DECL> :
+//
+// <PARAMETERS_CALL> ::= <E>
+// <PARAMETERS_CALL> ::= <EXTRA_PARAMETERS_CALL> <E>
+// <EXTRA_PARAMETERS_CALL> ::= <E> ','
+// <EXTRA_PARAMETERS_CALL> ::= <EXTRA_PARAMETERS_CALL> <E> ','
+func (parser *Parser) parametersDecl() error {
+	errSalt := "Parser.parametersDecl"
 	parser.accumulateRule("<PARAMETERS> ::= <EXTRA_PARAMETERS> <TYPE> ':' <ID> | <TYPE> ':' <ID>")
 
 	// 1. Expect ID (rightmost identifier in the parameter list)
@@ -1116,7 +1145,7 @@ func (parser *Parser) parameters() error {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// 4. Loop to check for extra parameters (reverse order)
+	// 4. Loop to check for extra parametersDecl (reverse order)
 	for parser.token == TComma {
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
@@ -1143,6 +1172,35 @@ func (parser *Parser) parameters() error {
 
 		// Expect <TYPE>
 		if err := parser.typeToken(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
+		}
+	}
+
+	return nil
+}
+
+// <PARAMETERS_CALL>
+//
+// <PARAMETERS_CALL> ::= <E>
+// <PARAMETERS_CALL> ::= <EXTRA_PARAMETERS_CALL> <E>
+// <EXTRA_PARAMETERS_CALL> ::= <E> ',' | <EXTRA_PARAMETERS_CALL> <E> ','
+func (parser *Parser) parametersCall() error {
+	errSalt := "Parser.parametersCall"
+	parser.accumulateRule("<PARAMETERS_CALL> ::= <EXTRA_PARAMETERS_CALL> <E> | <E>")
+
+	// Parse rightmost expression (last param)
+	if err := parser.e(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// Repeatedly handle comma-separated expressions
+	for parser.token == TComma {
+		parser.displayToken()
+		if err := parser.advanceToken(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
+		}
+
+		if err := parser.e(); err != nil {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 	}
@@ -1231,14 +1289,14 @@ func (parser *Parser) extraParameters() error {
 			if err := parser.advanceToken(); err != nil {
 				return log.SyntaxErrorf(errSalt, err)
 			}
-			if err := parser.parameters(); err != nil { // Call parameters, as EXTRA_PARAMETERS can have a full PARAMETERS on its right.
+			if err := parser.parametersDecl(); err != nil { // Call parametersDecl, as EXTRA_PARAMETERS can have a full PARAMETERS on its right.
 				return log.SyntaxErrorf(errSalt, err)
 			}
 		}
 
 	} else {
 		// This should not happen if extraParameters was called due to a comma.
-		// This means that the outer `parameters` method needs to handle the choice
+		// This means that the outer `parametersDecl` method needs to handle the choice
 		// of calling `extraParameters` or not based on lookahead.
 		return parser.handleSyntaxError(fmt.Errorf("expected ',', got %s for extraParameters", parser.lexeme))
 	}

@@ -83,6 +83,7 @@
 <X> ::= <STRING>
 <X> ::= <NIL>
 <X> ::= <VAR>
+<X> ::= '(' <PARAMETERS_CALL> ')' <ID>
 
 <STRING> ::= '"' <TEXT_WITH_NUMBERS> '"'
 
