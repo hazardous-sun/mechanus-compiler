@@ -21,12 +21,12 @@ type Parser struct {
 }
 
 const (
-	errExpectedCloseBraces      = "expected '}', got %s"
-	errExpectedOpenBraces       = "expected '{', got %s"
-	errExpectedOpenParenthesis  = "expected '(', got %s"
-	errExpectedCloseParenthesis = "expected ')', got %s"
-	errExpectedIdentifier       = "expected an identifier, got %s"
-	errExpectedColon            = "expected ':', got %s"
+	errExpectedCloseBraces      = "expected '}', got '%s'"
+	errExpectedOpenBraces       = "expected '{', got '%s'"
+	errExpectedOpenParenthesis  = "expected '(', got '%s'"
+	errExpectedCloseParenthesis = "expected ')', got '%s'"
+	errExpectedIdentifier       = "expected an identifier, got '%s'"
+	errExpectedColon            = "expected ':', got '%s'"
 )
 
 // NewParser :
@@ -132,93 +132,84 @@ func (parser *Parser) g() error {
 	return nil
 }
 
-// body :
-// <BODY> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect'
-// <BODY> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'
-// <BODY> ::= <BODY_REST>
+// <BODY> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect'
+//
+//	| <BODY_REST> '{' <CMDS> '}' '(' ')' <ID> 'Architect'
+//	| <BODY_REST> '{' <CMDS> '}' <TYPE> '(' ')' <ID> 'Architect'
+//	| <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'
 func (parser *Parser) body() error {
 	errSalt := "Parser.body"
-	parser.accumulateRule("<BODY> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' | '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect' | <BODY_REST>")
+	parser.accumulateRule("<BODY> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' | ...")
 
-	// The rule is written bottom-up, right-to-left. So we need to look for 'Architect' first.
-	// Since BODY_REST is epsilon, we should check for the fixed part first.
-
-	// Check for BODY_REST (epsilon)
-	if parser.token == TCloseBraces || parser.token == TId { // Assuming these tokens indicate the end of a BODY or the start of a new one.
-		parser.accumulateRule("<BODY> ::= ε (from <BODY_REST>)")
-		return parser.bodyRest()
-	}
-
-	// It means it must start with 'Architect'
+	// 1. Expect 'Architect'
 	if parser.token != TArchitect {
-		return parser.handleSyntaxError(fmt.Errorf("expected 'Architect' or start of a new body, got %s", parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf("expected 'Architect', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// Expect <ID>
+	// 2. Expect <ID>
 	if parser.token != TId {
-		return parser.handleSyntaxError(fmt.Errorf(errExpectedIdentifier, parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf("expected ID after Architect, got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// Expect ')'
+	// 3. Expect ')'
 	if parser.token != TCloseParentheses {
-		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// Expect <PARAMETERS> (not every function will have parameters, so the call may fail, and that's okay)
-	_ = parser.parameters()
-
-	// Expect '('
+	// 4. Optionally parse <PARAMETERS> (may be ε)
 	if parser.token != TOpenParentheses {
-		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenParenthesis, parser.lexeme))
+		_ = parser.parameters() // fail silently if no parameters
+	}
+
+	// 5. Expect '('
+	if parser.token != TOpenParentheses {
+		return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// Check if there is a TYPE before the opening parenthesis (second <BODY> rule)
-	if parser.token == TTypeName {
-		parser.displayToken()
-		if err := parser.advanceToken(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
-		parser.accumulateRule("<BODY> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'")
-	} else {
-		parser.accumulateRule("<BODY> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect'")
-	}
-
-	// Expect '}'
+	// 6. Expect '}'
 	if parser.token != TCloseBraces {
-		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// Expect <CMDS>
+	// 7. Parse <CMDS>
 	if err := parser.cmds(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// Expect '{'
+	// 8. Expect '{'
 	if parser.token != TOpenBraces {
-		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
+		return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
+		if strings.Contains(err.Error(), log.EndOfFileReached) {
+			return nil
+		}
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// 9. Recursively parse any additional Architect bodies
+	if err := parser.bodyRest(); err != nil {
 		if strings.Contains(err.Error(), log.EndOfFileReached) {
 			return nil
 		}
@@ -229,73 +220,85 @@ func (parser *Parser) body() error {
 }
 
 // bodyRest :
-// <BODY_REST> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' <BODY_REST>
-// <BODY_REST> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect' <BODY_REST>
+// <BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect'
+// <BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'
 // <BODY_REST> ::= ε
 func (parser *Parser) bodyRest() error {
-	parser.accumulateRule("<BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' | <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect' | ε")
+	errSalt := "Parser.bodyRest"
+	parser.accumulateRule("<BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' | ... | ε")
 
-	if parser.token == TArchitect {
-		if err := parser.advanceToken(); err != nil {
-			return err
-		}
-
-		// Expect <ID>
-		if parser.token != TId {
-			return parser.handleSyntaxError(fmt.Errorf("expected ID, got %s", parser.lexeme))
-		}
-		if err := parser.advanceToken(); err != nil {
-			return err
-		}
-
-		// Expect ')'
-		if parser.token != TCloseParentheses {
-			return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
-		}
-		if err := parser.advanceToken(); err != nil {
-			return err
-		}
-
-		// Try parsing parameters (may be ε)
-		if parser.token != TOpenParentheses {
-			_ = parser.parameters() // fail quietly if empty
-		}
-
-		// If a TYPE appears, consume it
-		if isTypeToken(parser.token) {
-			if err := parser.advanceToken(); err != nil {
-				return err
-			}
-		}
-
-		// Expect '}'
-		if parser.token != TCloseBraces {
-			return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
-		}
-		if err := parser.advanceToken(); err != nil {
-			return err
-		}
-
-		// Parse CMDS
-		if err := parser.cmds(); err != nil {
-			return err
-		}
-
-		// Expect '{'
-		if parser.token != TOpenBraces {
-			return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
-		}
-		if err := parser.advanceToken(); err != nil {
-			return err
-		}
-
-		// Recurse BODY_REST
-		return parser.bodyRest()
+	// 1. Base case: ε
+	if parser.token == TCloseBraces || parser.token == TInputEnd {
+		parser.accumulateRule("<BODY_REST> ::= ε")
+		return nil
 	}
 
-	// epsilon production
-	parser.accumulateRule("<BODY_REST> ::= ε")
-	return nil
+	// 2. Expect 'Architect'
+	if parser.token != TArchitect {
+		return parser.handleSyntaxError(fmt.Errorf("expected 'Architect', got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// 3. Expect <ID>
+	if parser.token != TId {
+		return parser.handleSyntaxError(fmt.Errorf("expected ID after Architect, got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// 4. Expect ')'
+	if parser.token != TCloseParentheses {
+		return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// 5. Optionally parse <PARAMETERS>
+	if parser.token != TOpenParentheses {
+		_ = parser.parameters() // fails silently if epsilon
+	}
+
+	// 6. Expect '('
+	if parser.token != TOpenParentheses {
+		return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// 7. Expect '}'
+	if parser.token != TCloseBraces {
+		return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// 8. Parse <CMDS>
+	if err := parser.cmds(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// 9. Expect '{'
+	if parser.token != TOpenBraces {
+		return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// 10. Recurse to parse next body
+	return parser.bodyRest()
 }
 
 // typeToken :
@@ -855,6 +858,10 @@ func (parser *Parser) condition() error {
 	if err := parser.e(); err != nil {
 		return log.SyntaxErrorf(errSalt, err)
 	}
+	//parser.displayToken()
+	//if err := parser.advanceToken(); err != nil {
+	//	return log.SyntaxErrorf(errSalt, err)
+	//}
 
 	return nil
 }
@@ -1083,36 +1090,60 @@ func (parser *Parser) id() error {
 // <PARAMETERS> ::= <ID> ':' <TYPE>
 // <PARAMETERS> ::= <ID> ':' <TYPE> <EXTRA_PARAMETERS>
 func (parser *Parser) parameters() error {
-	parser.accumulateRule("<PARAMETERS> ::= <TYPE> ':' <ID> | <EXTRA_PARAMETERS> <TYPE> ':' <ID>")
+	errSalt := "Parser.parameters"
+	parser.accumulateRule("<PARAMETERS> ::= <EXTRA_PARAMETERS> <TYPE> ':' <ID> | <TYPE> ':' <ID>")
 
-	// Handle optional parameters (ε case)
-	if parser.token == TCloseParentheses {
-		parser.accumulateRule("<PARAMETERS> ::= ε")
-		return nil
+	// 1. Expect ID (rightmost identifier in the parameter list)
+	if parser.token != TId {
+		return parser.handleSyntaxError(fmt.Errorf("expected parameter ID, got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
 	}
 
-	// Try parsing EXTRA_PARAMETERS first
-	for isTypeToken(parser.token) {
-		if err := parser.typeToken(); err != nil {
-			return err
+	// 2. Expect ':'
+	if parser.token != TColon {
+		return parser.handleSyntaxError(fmt.Errorf("expected ':', got %s", parser.lexeme))
+	}
+	parser.displayToken()
+	if err := parser.advanceToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// 3. Expect <TYPE>
+	if err := parser.typeToken(); err != nil {
+		return log.SyntaxErrorf(errSalt, err)
+	}
+
+	// 4. Loop to check for extra parameters (reverse order)
+	for parser.token == TComma {
+		parser.displayToken()
+		if err := parser.advanceToken(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
 		}
+
+		// Expect ID
+		if parser.token != TId {
+			return parser.handleSyntaxError(fmt.Errorf("expected parameter ID, got %s", parser.lexeme))
+		}
+		parser.displayToken()
+		if err := parser.advanceToken(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
+		}
+
+		// Expect ':'
 		if parser.token != TColon {
 			return parser.handleSyntaxError(fmt.Errorf("expected ':', got %s", parser.lexeme))
 		}
+		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return err
+			return log.SyntaxErrorf(errSalt, err)
 		}
-		if parser.token != TId {
-			return parser.handleSyntaxError(fmt.Errorf("expected ID after ':', got %s", parser.lexeme))
-		}
-		if err := parser.advanceToken(); err != nil {
-			return err
-		}
-		if parser.token != TComma {
-			break // end of param list
-		}
-		if err := parser.advanceToken(); err != nil {
-			return err
+
+		// Expect <TYPE>
+		if err := parser.typeToken(); err != nil {
+			return log.SyntaxErrorf(errSalt, err)
 		}
 	}
 

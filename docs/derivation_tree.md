@@ -3,12 +3,13 @@
 ```
 <G> ::= '{' <BODY> '}' <ID> 'Construct'
 
-<BODY> ::= '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect'
-<BODY> ::= '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'
-<BODY> ::= <BODY_REST>
+<BODY> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS_DECL> ')' <ID> 'Architect'
+<BODY> ::= <BODY_REST> '{' <CMDS> '}' '(' ')' <ID> 'Architect'
+<BODY> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' ')' <ID> 'Architect'
+<BODY> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS_DECL> ')' <ID> 'Architect'
 
-<BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect'
-<BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS> ')' <ID> 'Architect'
+<BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS_DECL> ')' <ID> 'Architect'
+<BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS_DECL> ')' <ID> 'Architect'
 <BODY_REST> ::= ε
 
 <TYPE> ::= 'Nil'
@@ -87,11 +88,14 @@
 
 <NIL> ::= 'Nil'
 
-<PARAMETERS> ::= <TYPE> ':' <ID> 
-<PARAMETERS> ::= <EXTRA_PARAMETERS> <TYPE> ':' <ID>
+<PARAMETERS_DECL> ::= <EXTRA_PARAMETERS_DECL> <TYPE> ':' <ID> | <TYPE> ':' <ID>
+<EXTRA_PARAMETERS_DECL> ::= <TYPE> ':' <ID> ','
+<EXTRA_PARAMETERS_DECL> ::= <EXTRA_PARAMETERS_DECL> <TYPE> ':' <ID> ','
 
-<EXTRA_PARAMETERS> ::= <TYPE> ':' <ID> ','
-<EXTRA_PARAMETERS> ::= <EXTRA_PARAMETERS> <TYPE> ':' <ID> ','
+<PARAMETERS_CALL> ::= <E>
+<PARAMETERS_CALL> ::= <EXTRA_PARAMETERS_CALL> <E>
+<EXTRA_PARAMETERS_CALL> ::= <E> ',' | <EXTRA_PARAMETERS_CALL> <E> ','
+<EXTRA_PARAMETERS_CALL> ::= <EXTRA_PARAMETERS_CALL> <E> ','
 
 <ID> ::= (([A-Z]|[a-z])+(_|[0-9])*)+
 

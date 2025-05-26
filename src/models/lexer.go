@@ -572,7 +572,7 @@ func (lex *Lexer) multiSymbolCharacter(temp rune) error {
 	var err error
 	lex.lexeme = sbLexeme.String()
 
-	switch lex.lexeme {
+	switch reverse(lex.lexeme) {
 	// Construction tokens
 	case SingleLineComment:
 		lex.token = TSingleLineComment
@@ -620,8 +620,8 @@ func (lex *Lexer) multiSymbolCharacter(temp rune) error {
 
 func checkMultiSymbolMatch(char1, char2 rune) bool {
 	sbLexeme := strings.Builder{}
-	sbLexeme.WriteRune(char1)
 	sbLexeme.WriteRune(char2)
+	sbLexeme.WriteRune(char1)
 	symbol := sbLexeme.String()
 	switch symbol {
 	case SingleLineComment:

@@ -157,7 +157,7 @@ const (
 	NotEqualOperator     = "!="
 	AndOperator          = "&&"
 	OrOperator           = "||"
-	DeclarationOperator  = ":="
+	DeclarationOperator  = "=:"
 )
 
 //**********************************************************************************************************************
