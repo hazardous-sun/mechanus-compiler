@@ -389,7 +389,6 @@ func (parser *Parser) cmd() error {
 		return nil
 	}
 
-	// ✅ NEW: check for a function call command: (<PARAMETERS_CALL>) <ID>
 	if parser.token == TCloseParentheses {
 		parser.accumulateRule("<CMD_CALL> ::= '(' <PARAMETERS_CALL> ')' <ID>")
 
@@ -399,20 +398,20 @@ func (parser *Parser) cmd() error {
 		}
 
 		// Expect opening parenthesis
-		if parser.token != TOpenParentheses {
-			return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
-		}
-		parser.displayToken()
-		if err := parser.advanceToken(); err != nil {
-			return log.SyntaxErrorf(errSalt, err)
-		}
-
-		// Expect the function name ID
-		if parser.token != TId {
-			return parser.handleSyntaxError(fmt.Errorf("expected function name (ID), got %s", parser.lexeme))
-		}
-		parser.displayToken()
-		return parser.advanceToken()
+		//if parser.token != TOpenParentheses {
+		//	return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
+		//}
+		//parser.displayToken()
+		//if err := parser.advanceToken(); err != nil {
+		//	return log.SyntaxErrorf(errSalt, err)
+		//}
+		//
+		//// Expect the function name ID
+		//if parser.token != TId {
+		//	return parser.handleSyntaxError(fmt.Errorf("expected function name (ID), got %s", parser.lexeme))
+		//}
+		//parser.displayToken()
+		return nil
 	}
 
 	// If no command matches, it's a syntax error
@@ -1043,12 +1042,13 @@ func (parser *Parser) x() error {
 			return log.SyntaxErrorf(errSalt, err)
 		}
 
-		// After param list, expect function name (identifier)
-		if parser.token != TId {
-			return parser.handleSyntaxError(fmt.Errorf("expected function name ID after parameters, got %s", parser.lexeme))
-		}
-		parser.displayToken()
-		return parser.advanceToken()
+		//// After param list, expect function name (identifier)
+		//if parser.token != TId {
+		//	return parser.handleSyntaxError(fmt.Errorf("expected function name ID after parameters, got %s", parser.lexeme))
+		//}
+		//parser.displayToken()
+		//return parser.advanceToken()
+		return nil
 	}
 
 	// If no valid rule matches, return error
