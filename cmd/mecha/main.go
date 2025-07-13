@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	log "mechanus-compiler/src/error"
-	"mechanus-compiler/src/models"
+	"mechanus-compiler/internal/compiler_error"
+	"mechanus-compiler/internal/parser"
 	"os"
 )
 
@@ -20,17 +20,17 @@ func main() {
 	}
 	defer func() {
 		if err := sourceFile.Close(); err != nil {
-			err = log.FileErrorf(errSalt, err)
-			log.LogError(err)
+			err = compiler_error.FileErrorf(errSalt, err)
+			compiler_error.LogError(err)
 		}
 		if err := outputFile.Close(); err != nil {
-			err = log.FileErrorf(errSalt, err)
-			log.LogError(err)
+			err = compiler_error.FileErrorf(errSalt, err)
+			compiler_error.LogError(err)
 		}
 	}()
 
 	// Initialize the parser
-	parser, err := models.NewParser(sourceFile, outputFile, debug)
+	parser, err := parser.NewParser(sourceFile, outputFile, debug)
 
 	if err != nil {
 		os.Exit(1)
@@ -53,8 +53,8 @@ func getFiles() (*os.File, *os.File, error) {
 	sourceFile, err := os.Open(filePaths[0])
 
 	if err != nil {
-		err = log.FileErrorf("getFiles", err)
-		log.LogError(err)
+		err = compiler_error.FileErrorf("getFiles", err)
+		compiler_error.LogError(err)
 		return nil, nil, err
 	}
 
@@ -62,8 +62,8 @@ func getFiles() (*os.File, *os.File, error) {
 	outputFile, err := os.Create(filePaths[1])
 
 	if err != nil {
-		err = log.FileErrorf("getFiles", err)
-		log.LogError(err)
+		err = compiler_error.FileErrorf("getFiles", err)
+		compiler_error.LogError(err)
 		return nil, nil, err
 	}
 
@@ -81,8 +81,8 @@ func getFilePaths() ([]string, error) {
 
 	// Check if required flags are provided
 	if *inputFile == "" {
-		err := log.FileErrorf("getFilePaths", fmt.Errorf(log.NoSourceFile))
-		log.LogError(err)
+		err := compiler_error.FileErrorf("getFilePaths", fmt.Errorf(compiler_error.NoSourceFile))
+		compiler_error.LogError(err)
 		return nil, err
 	}
 

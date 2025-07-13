@@ -1,4 +1,4 @@
-package custom_errors
+package compiler_error
 
 // AnalysisError :
 // The base type for all custom errors in the compiler.

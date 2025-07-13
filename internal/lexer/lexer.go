@@ -1,9 +1,9 @@
-package models
+package lexer
 
 import (
 	"bufio"
 	"fmt"
-	log "mechanus-compiler/src/error"
+	"mechanus-compiler/internal/compiler_error"
 	"os"
 	"strings"
 )
@@ -54,15 +54,15 @@ func NewLexer(inputFile, outputFile *os.File, debug bool) (Lexer, error) {
 
 	// Read the source file
 	if err := lex.readLines(); err != nil {
-		err = log.FileErrorf("NewLexer", err)
-		log.LogError(err)
+		err = compiler_error.FileErrorf("NewLexer", err)
+		compiler_error.LogError(err)
 		return Lexer{}, err
 	}
 
 	// Collect the first lexeme
 	if err := lex.moveLookAhead(); err != nil {
-		err = log.FileErrorf("NewLexer", err)
-		log.LogError(err)
+		err = compiler_error.FileErrorf("NewLexer", err)
+		compiler_error.LogError(err)
 		return Lexer{}, err
 	}
 
@@ -78,14 +78,14 @@ func (lex *Lexer) NextToken() (int, error) {
 	// Check if lex.lookAhead is inside a comment block
 	if lex.commentBlock {
 		if err := lex.skipComment(); err != nil {
-			err = log.LexerErrorf(errSalt, err)
-			log.LogError(err)
+			err = compiler_error.LexerErrorf(errSalt, err)
+			compiler_error.LogError(err)
 			return -1, err
 		}
 	} else {
 		for lex.isSeparatorCharacter() {
 			if err := lex.moveLookAhead(); err != nil {
-				err = log.LexerErrorf(errSalt, err)
+				err = compiler_error.LexerErrorf(errSalt, err)
 				return -1, err
 			}
 		}
@@ -98,13 +98,13 @@ func (lex *Lexer) NextToken() (int, error) {
 	}
 
 	if err != nil {
-		err = log.LexerErrorf(errSalt, err)
-		log.LogError(err)
+		err = compiler_error.LexerErrorf(errSalt, err)
+		compiler_error.LogError(err)
 		return -1, err
 	}
 
 	if lex.debug {
-		log.LogDebug(fmt.Sprintf("Lexer.Token = %d", lex.token))
+		compiler_error.LogDebug(fmt.Sprintf("Lexer.Token = %d", lex.token))
 	}
 
 	return lex.token, nil
@@ -154,25 +154,25 @@ func (lex *Lexer) GetPos() []int {
 // Closes the specified file (either input or output).
 func (lex *Lexer) Close(file string) {
 	if lex.debug {
-		log.LogDebug(fmt.Sprintf("closing %s file", file))
+		compiler_error.LogDebug(fmt.Sprintf("closing %s file", file))
 	}
 
 	switch file {
 	case "input":
 		if err := lex.inputFile.Close(); err != nil {
-			err = log.FileErrorf("Lexer.Close", err)
-			log.LogError(err)
+			err = compiler_error.FileErrorf("Lexer.Close", err)
+			compiler_error.LogError(err)
 			return
 		}
 	case "output":
 		if err := lex.outputFile.Close(); err != nil {
-			err = log.FileErrorf("Lexer.Close", err)
-			log.LogError(err)
+			err = compiler_error.FileErrorf("Lexer.Close", err)
+			compiler_error.LogError(err)
 			return
 		}
 	}
 
-	log.LogSuccess(log.FileCloseSuccess)
+	compiler_error.LogSuccess(compiler_error.FileCloseSuccess)
 }
 
 // Fail :
@@ -190,33 +190,33 @@ func (lex *Lexer) WriteOutput() error {
 	errSalt := "(Lexer.WriteOutput)"
 
 	if lex.outputFile == nil {
-		err := log.FileErrorf(errSalt, fmt.Errorf(log.UninitializedFile))
-		log.LogError(err)
+		err := compiler_error.FileErrorf(errSalt, fmt.Errorf(compiler_error.UninitializedFile))
+		compiler_error.LogError(err)
 		return err
 	}
 
 	file, err := os.Create("output.txt")
 
 	if err != nil {
-		err = log.FileErrorf(errSalt, err)
-		log.LogError(err)
+		err = compiler_error.FileErrorf(errSalt, err)
+		compiler_error.LogError(err)
 		return err
 	}
 	defer func(file *os.File) {
 		if err := file.Close(); err != nil {
-			err = log.FileErrorf(errSalt, err)
-			log.LogError(err)
+			err = compiler_error.FileErrorf(errSalt, err)
+			compiler_error.LogError(err)
 			return
 		}
 	}(file)
 
 	if _, err = file.WriteString(lex.identifiedTokens.String()); err != nil {
-		err = log.FileErrorf(errSalt, err)
-		log.LogError(err)
+		err = compiler_error.FileErrorf(errSalt, err)
+		compiler_error.LogError(err)
 		return err
 	}
 
-	log.LogSuccess(log.FileCreateSuccess)
+	compiler_error.LogSuccess(compiler_error.FileCreateSuccess)
 	return nil
 }
 
@@ -224,7 +224,7 @@ func (lex *Lexer) WriteOutput() error {
 // Displays the list of identified tokens.
 func (lex *Lexer) ShowTokens() {
 	if lex.debug {
-		log.LogDebug(log.IdentifiedTokens)
+		compiler_error.LogDebug(compiler_error.IdentifiedTokens)
 	}
 	fmt.Println(lex.identifiedTokens.String())
 }
@@ -246,14 +246,14 @@ func (lex *Lexer) readLines() error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		err = log.FileErrorf("Lexer.readLines", err)
-		log.LogError(err)
+		err = compiler_error.FileErrorf("Lexer.readLines", err)
+		compiler_error.LogError(err)
 		return err
 	}
 
 	if len(lex.lines) == 0 {
-		err := log.FileErrorf("Lexer.readLines", fmt.Errorf(log.EmptyFile))
-		log.LogError(err)
+		err := compiler_error.FileErrorf("Lexer.readLines", fmt.Errorf(compiler_error.EmptyFile))
+		compiler_error.LogError(err)
 		return err
 	}
 
@@ -279,7 +279,7 @@ func (lex *Lexer) moveLookAhead() error {
 
 		// Check if EOF was reached
 		if err != nil {
-			err = log.FileErrorf("Lexer.moveLookAhead", err)
+			err = compiler_error.FileErrorf("Lexer.moveLookAhead", err)
 			return err
 		}
 
@@ -310,9 +310,9 @@ func (lex *Lexer) nextLine() error {
 	// Check if the top of the file was reached
 	if lex.currentLine <= 0 {
 		if lex.debug {
-			log.LogDebug(log.EndOfFileReached)
+			compiler_error.LogDebug(compiler_error.EndOfFileReached)
 		}
-		return log.FileError(fmt.Errorf(log.EndOfFileReached))
+		return compiler_error.FileError(fmt.Errorf(compiler_error.EndOfFileReached))
 	}
 
 	// Collect the content of the line
@@ -325,8 +325,8 @@ func (lex *Lexer) nextLine() error {
 func (lex *Lexer) skipComment() error {
 	for !lex.multilineCommentEnd() {
 		if err := lex.moveLookAhead(); err != nil {
-			err = log.LexerErrorf("Lexer.skipComment", err)
-			log.LogError(err)
+			err = compiler_error.LexerErrorf("Lexer.skipComment", err)
+			compiler_error.LogError(err)
 			return err
 		}
 	}
@@ -375,8 +375,8 @@ func (lex *Lexer) collectLexeme() error {
 	}
 
 	if err != nil {
-		err = log.LexerErrorf("Lexer.collectLexeme", err)
-		log.LogError(err)
+		err = compiler_error.LexerErrorf("Lexer.collectLexeme", err)
+		compiler_error.LogError(err)
 		return err
 	}
 
@@ -443,8 +443,8 @@ func (lex *Lexer) alphabeticalCharacter() error {
 	for (lex.lookAhead >= 'A' && lex.lookAhead <= 'Z') || (lex.lookAhead >= 'a' && lex.lookAhead <= 'z') || (lex.lookAhead >= '0' && lex.lookAhead <= '9') || lex.lookAhead == '_' {
 		sbLexeme.WriteRune(lex.lookAhead)
 		if err := lex.moveLookAhead(); err != nil {
-			err = log.LexerErrorf("Lexer.alphabeticalCharacter", err)
-			log.LogError(err)
+			err = compiler_error.LexerErrorf("Lexer.alphabeticalCharacter", err)
+			compiler_error.LogError(err)
 			return err
 		}
 	}
@@ -501,8 +501,8 @@ func (lex *Lexer) numericalCharacter() error {
 	sbLexeme.WriteRune(lex.lookAhead)
 
 	if err := lex.moveLookAhead(); err != nil {
-		err = log.LexerErrorf("Lexer.numericalCharacter", err)
-		log.LogError(err)
+		err = compiler_error.LexerErrorf("Lexer.numericalCharacter", err)
+		compiler_error.LogError(err)
 		return err
 	}
 
@@ -516,8 +516,8 @@ func (lex *Lexer) numericalCharacter() error {
 		sbLexeme.WriteRune(lex.lookAhead)
 
 		if err := lex.moveLookAhead(); err != nil {
-			err = log.LexerErrorf("Lexer.numericalCharacter", err)
-			log.LogError(err)
+			err = compiler_error.LexerErrorf("Lexer.numericalCharacter", err)
+			compiler_error.LogError(err)
 			return err
 		}
 	}
@@ -538,14 +538,14 @@ func (lex *Lexer) symbolCharacter() error {
 	temp := lex.lookAhead
 
 	if err := lex.moveLookAhead(); err != nil {
-		err = log.LexerErrorf("Lexer.symbolCharacter", err)
-		log.LogError(err)
+		err = compiler_error.LexerErrorf("Lexer.symbolCharacter", err)
+		compiler_error.LogError(err)
 		return err
 	}
 
 	if err := lex.multiSymbolCharacter(temp); err != nil {
-		err = log.LexerErrorf("Lexer.symbolCharacter", err)
-		log.LogError(err)
+		err = compiler_error.LexerErrorf("Lexer.symbolCharacter", err)
+		compiler_error.LogError(err)
 		return err
 	}
 
@@ -563,8 +563,8 @@ func (lex *Lexer) multiSymbolCharacter(temp rune) error {
 		sbLexeme.WriteRune(lex.lookAhead)
 
 		if err := lex.moveLookAhead(); err != nil {
-			err = log.LexerErrorf("Lexer.multiSymbolCharacter", err)
-			log.LogError(err)
+			err = compiler_error.LexerErrorf("Lexer.multiSymbolCharacter", err)
+			compiler_error.LogError(err)
 			return err
 		}
 	}
@@ -606,8 +606,8 @@ func (lex *Lexer) multiSymbolCharacter(temp rune) error {
 	}
 
 	if err != nil {
-		err = log.LexerErrorf("Lexer.multiSymbolCharacter", err)
-		log.LogError(err)
+		err = compiler_error.LexerErrorf("Lexer.multiSymbolCharacter", err)
+		compiler_error.LogError(err)
 		return err
 	}
 
@@ -707,21 +707,21 @@ func (lex *Lexer) quoteCharacters() error {
 	errSalt := "(Lexer.quoteCharacters)"
 
 	if err := lex.moveLookAhead(); err != nil {
-		err = log.LexerErrorf(errSalt, err)
-		log.LogError(err)
+		err = compiler_error.LexerErrorf(errSalt, err)
+		compiler_error.LogError(err)
 		return err
 	}
 
 	for lex.lookAhead != char {
 		if char == '\'' && charCount > 1 {
-			return fmt.Errorf(log.InvalidMonodrone)
+			return fmt.Errorf(compiler_error.InvalidMonodrone)
 		}
 
 		sbLexeme.WriteRune(lex.lookAhead)
 
 		if err := lex.moveLookAhead(); err != nil {
-			err = log.LexerErrorf(errSalt, err)
-			log.LogError(err)
+			err = compiler_error.LexerErrorf(errSalt, err)
+			compiler_error.LogError(err)
 			return err
 		}
 
@@ -731,8 +731,8 @@ func (lex *Lexer) quoteCharacters() error {
 	sbLexeme.WriteRune(lex.lookAhead)
 
 	if err := lex.moveLookAhead(); err != nil {
-		err = log.LexerErrorf("Lexer.quoteCharacters", err)
-		log.LogError(err)
+		err = compiler_error.LexerErrorf("Lexer.quoteCharacters", err)
+		compiler_error.LogError(err)
 		return err
 	}
 
