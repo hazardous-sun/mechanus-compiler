@@ -1,5 +1,9 @@
-.idea/
-Lexico.java
-output
-output.txt
-local-examples/
+*
+!.gitignore
+!cmd/
+!docs/
+!internal/
+!go.mod
+!go.sum
+!README.md
+!run.sh
