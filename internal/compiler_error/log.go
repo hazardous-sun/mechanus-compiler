@@ -1,62 +1,134 @@
 package compiler_error
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
+	"io"
+	"os"
+	"runtime"
+	"sync"
+	"time"
 )
 
+// LogLevel defines the severity of the log entry.
+type LogLevel int
+
+// Defines all available log levels.
 const (
-	DebugLevel   = "debug"
-	WarningLevel = "warning"
-	ErrorLevel   = "error"
-	SuccessLevel = "success"
+	LevelDebug LogLevel = iota
+	LevelInfo
+	LevelWarning
+	LevelError
+	LevelFatal
 )
 
-const (
-	defaultColor = "\033[0m"
-	infoColor    = "\033[36m"
-	errorColor   = "\033[91m"
-	warningColor = "\033[93m"
-	successColor = "\033[32m"
-)
-
-// customLog :
-// Logs a message to the appropriate channel.
-func customLog(message string, level string) {
-	switch level {
-	case DebugLevel:
-		log.Println(fmt.Sprintf("%sdebug: %s %s", infoColor, message, defaultColor))
-	case WarningLevel:
-		log.Println(fmt.Sprintf("%swarning: %s %s", warningColor, message, defaultColor))
-	case ErrorLevel:
-		log.Println(fmt.Sprintf("%serror: %s %s", errorColor, message, defaultColor))
-	case SuccessLevel:
-		log.Println(fmt.Sprintf("%ssuccess: %s %s", successColor, message, defaultColor))
+// String returns the string representation of a log level.
+func (l LogLevel) String() string {
+	switch l {
+	case LevelDebug:
+		return "DEBUG"
+	case LevelInfo:
+		return "INFO"
+	case LevelWarning:
+		return "WARNING"
+	case LevelError:
+		return "ERROR"
+	case LevelFatal:
+		return "FATAL"
 	default:
-		log.Println(fmt.Sprintf("%sinvalid log level%s '%s'%s -> %s", errorColor, warningColor, level, defaultColor, message))
+		return "UNKNOWN"
 	}
 }
 
-// LogDebug :
-// Logs an info.
-func LogDebug(message string) {
-	customLog(message, DebugLevel)
+// Logger represents an active logging object that generates lines of JSON output to an io.Writer.
+type Logger struct {
+	out      io.Writer
+	minLevel LogLevel
+	mu       sync.Mutex
 }
 
-// LogWarning :
-// Logs a warning.
-func LogWarning(message string) {
-	customLog(message, WarningLevel)
+// New creates a new Logger. The out variable sets the destination to which log data will be written.
+// The minLevel parameter sets the minimum level for logs to be written.
+func New(out io.Writer, minLevel LogLevel) *Logger {
+	return &Logger{
+		out:      out,
+		minLevel: minLevel,
+	}
 }
 
-// LogError :
-// Logs an error with proper unwrapping
-func LogError(err error) {
-	customLog(err.Error(), ErrorLevel)
+// print is an internal method that marshals the log entry and writes it to the output.
+func (l *Logger) print(level LogLevel, message string, properties map[string]any) {
+	if level < l.minLevel {
+		return
+	}
+
+	// Get file and line number of the caller.
+	_, file, line, ok := runtime.Caller(2)
+	if !ok {
+		file = "???"
+		line = 0
+	}
+
+	entry := struct {
+		Time       string         `json:"time"`
+		Level      string         `json:"level"`
+		Message    string         `json:"message"`
+		Properties map[string]any `json:"properties,omitempty"`
+		File       string         `json:"file,omitempty"`
+	}{
+		Time:       time.Now().UTC().Format(time.RFC3339),
+		Level:      level.String(),
+		Message:    message,
+		Properties: properties,
+		File:       fmt.Sprintf("%s:%d", file, line),
+	}
+
+	// Use a mutex to ensure that log writes from different goroutines don't get interleaved.
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	lineBytes, err := json.Marshal(entry)
+	if err != nil {
+		// If marshaling fails, fall back to a plain text representation.
+		lineBytes = []byte(fmt.Sprintf("%s %s: marshaling error: %v", LevelError.String(), time.Now().UTC().Format(time.RFC3339), err))
+	}
+
+	l.out.Write(append(lineBytes, '\n'))
 }
 
-// LogSuccess :
-// Logs a success message.
-func LogSuccess(message string) {
-	customLog(message, SuccessLevel)
+// --- Public Logging Methods ---
+
+func (l *Logger) Debug(message string, properties map[string]any) {
+	l.print(LevelDebug, message, properties)
+}
+
+func (l *Logger) Info(message string, properties map[string]any) {
+	l.print(LevelInfo, message, properties)
+}
+
+func (l *Logger) Warning(message string, properties map[string]any) {
+	l.print(LevelWarning, message, properties)
+}
+
+func (l *Logger) Error(err error, properties map[string]any) {
+	if err == nil {
+		return
+	}
+	if properties == nil {
+		properties = make(map[string]any)
+	}
+	properties["error"] = err.Error()
+	l.print(LevelError, "an error occurred", properties)
+}
+
+func (l *Logger) Fatal(err error, properties map[string]any) {
+	if err == nil {
+		return
+	}
+	if properties == nil {
+		properties = make(map[string]any)
+	}
+	properties["error"] = err.Error()
+	l.print(LevelFatal, "a fatal error occurred", properties)
+	os.Exit(1)
 }
