@@ -12,7 +12,7 @@ import (
 // This is the structure responsible for making the lexical analysis of the source file. It checks for unrecognized
 // lexemes and, if it finds one, it returns an error code.
 type Lexer struct {
-	debug            bool
+	logger           *compiler_error.Logger
 	inputFile        *os.File
 	lines            []string
 	outputFile       *os.File
@@ -38,9 +38,16 @@ type Lexer struct {
 //
 // Fails if it is not possible to read the source file.
 func NewLexer(inputFile, outputFile *os.File, debug bool) (Lexer, error) {
+	// Initialize the logger. Log to Stderr. Set level based on the debug flag.
+	logLevel := compiler_error.LevelInfo
+	if debug {
+		logLevel = compiler_error.LevelDebug
+	}
+	lg := compiler_error.New(os.Stderr, logLevel)
+
 	// Initialize the structure
 	lex := Lexer{
-		debug:         debug,
+		logger:        lg,
 		inputFile:     inputFile,
 		outputFile:    outputFile,
 		lines:         make([]string, 0),
@@ -55,14 +62,16 @@ func NewLexer(inputFile, outputFile *os.File, debug bool) (Lexer, error) {
 	// Read the source file
 	if err := lex.readLines(); err != nil {
 		err = compiler_error.FileErrorf("NewLexer", err)
-		compiler_error.LogError(err)
+		// Use the new logger to log the error
+		lex.logger.Error(err, map[string]any{"source": "NewLexer"})
 		return Lexer{}, err
 	}
 
 	// Collect the first lexeme
 	if err := lex.moveLookAhead(); err != nil {
 		err = compiler_error.FileErrorf("NewLexer", err)
-		compiler_error.LogError(err)
+		// Use the new logger to log the error
+		lex.logger.Error(err, map[string]any{"source": "NewLexer"})
 		return Lexer{}, err
 	}
 
@@ -79,7 +88,7 @@ func (lex *Lexer) NextToken() (int, error) {
 	if lex.commentBlock {
 		if err := lex.skipComment(); err != nil {
 			err = compiler_error.LexerErrorf(errSalt, err)
-			compiler_error.LogError(err)
+			lex.logger.Error(err, map[string]any{"source": errSalt})
 			return -1, err
 		}
 	} else {
@@ -99,13 +108,11 @@ func (lex *Lexer) NextToken() (int, error) {
 
 	if err != nil {
 		err = compiler_error.LexerErrorf(errSalt, err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, map[string]any{"source": errSalt})
 		return -1, err
 	}
 
-	if lex.debug {
-		compiler_error.LogDebug(fmt.Sprintf("Lexer.Token = %d", lex.token))
-	}
+	lex.logger.Debug("Token processed", map[string]any{"tokenID": lex.token})
 
 	return lex.token, nil
 }
@@ -153,26 +160,24 @@ func (lex *Lexer) GetPos() []int {
 // Close :
 // Closes the specified file (either input or output).
 func (lex *Lexer) Close(file string) {
-	if lex.debug {
-		compiler_error.LogDebug(fmt.Sprintf("closing %s file", file))
-	}
+	lex.logger.Debug("Closing file", map[string]any{"file_type": file})
 
 	switch file {
 	case "input":
 		if err := lex.inputFile.Close(); err != nil {
 			err = compiler_error.FileErrorf("Lexer.Close", err)
-			compiler_error.LogError(err)
+			lex.logger.Error(err, nil)
 			return
 		}
 	case "output":
 		if err := lex.outputFile.Close(); err != nil {
 			err = compiler_error.FileErrorf("Lexer.Close", err)
-			compiler_error.LogError(err)
+			lex.logger.Error(err, nil)
 			return
 		}
 	}
 
-	compiler_error.LogSuccess(compiler_error.FileCloseSuccess)
+	lex.logger.Info(compiler_error.FileCloseSuccess, nil)
 }
 
 // Fail :
@@ -191,7 +196,7 @@ func (lex *Lexer) WriteOutput() error {
 
 	if lex.outputFile == nil {
 		err := compiler_error.FileErrorf(errSalt, fmt.Errorf(compiler_error.UninitializedFile))
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
@@ -199,33 +204,31 @@ func (lex *Lexer) WriteOutput() error {
 
 	if err != nil {
 		err = compiler_error.FileErrorf(errSalt, err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 	defer func(file *os.File) {
 		if err := file.Close(); err != nil {
 			err = compiler_error.FileErrorf(errSalt, err)
-			compiler_error.LogError(err)
+			lex.logger.Error(err, nil)
 			return
 		}
 	}(file)
 
 	if _, err = file.WriteString(lex.identifiedTokens.String()); err != nil {
 		err = compiler_error.FileErrorf(errSalt, err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
-	compiler_error.LogSuccess(compiler_error.FileCreateSuccess)
+	lex.logger.Info(compiler_error.FileCreateSuccess, nil)
 	return nil
 }
 
 // ShowTokens :
 // Displays the list of identified tokens.
 func (lex *Lexer) ShowTokens() {
-	if lex.debug {
-		compiler_error.LogDebug(compiler_error.IdentifiedTokens)
-	}
+	lex.logger.Debug(compiler_error.IdentifiedTokens, nil)
 	fmt.Println(lex.identifiedTokens.String())
 }
 
@@ -247,13 +250,13 @@ func (lex *Lexer) readLines() error {
 
 	if err := scanner.Err(); err != nil {
 		err = compiler_error.FileErrorf("Lexer.readLines", err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
 	if len(lex.lines) == 0 {
 		err := compiler_error.FileErrorf("Lexer.readLines", fmt.Errorf(compiler_error.EmptyFile))
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
@@ -309,9 +312,7 @@ func (lex *Lexer) nextLine() error {
 
 	// Check if the top of the file was reached
 	if lex.currentLine <= 0 {
-		if lex.debug {
-			compiler_error.LogDebug(compiler_error.EndOfFileReached)
-		}
+		lex.logger.Debug(compiler_error.EndOfFileReached, nil)
 		return compiler_error.FileError(fmt.Errorf(compiler_error.EndOfFileReached))
 	}
 
@@ -326,7 +327,7 @@ func (lex *Lexer) skipComment() error {
 	for !lex.multilineCommentEnd() {
 		if err := lex.moveLookAhead(); err != nil {
 			err = compiler_error.LexerErrorf("Lexer.skipComment", err)
-			compiler_error.LogError(err)
+			lex.logger.Error(err, nil)
 			return err
 		}
 	}
@@ -376,7 +377,7 @@ func (lex *Lexer) collectLexeme() error {
 
 	if err != nil {
 		err = compiler_error.LexerErrorf("Lexer.collectLexeme", err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
@@ -444,7 +445,7 @@ func (lex *Lexer) alphabeticalCharacter() error {
 		sbLexeme.WriteRune(lex.lookAhead)
 		if err := lex.moveLookAhead(); err != nil {
 			err = compiler_error.LexerErrorf("Lexer.alphabeticalCharacter", err)
-			compiler_error.LogError(err)
+			lex.logger.Error(err, nil)
 			return err
 		}
 	}
@@ -502,7 +503,7 @@ func (lex *Lexer) numericalCharacter() error {
 
 	if err := lex.moveLookAhead(); err != nil {
 		err = compiler_error.LexerErrorf("Lexer.numericalCharacter", err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
@@ -517,7 +518,7 @@ func (lex *Lexer) numericalCharacter() error {
 
 		if err := lex.moveLookAhead(); err != nil {
 			err = compiler_error.LexerErrorf("Lexer.numericalCharacter", err)
-			compiler_error.LogError(err)
+			lex.logger.Error(err, nil)
 			return err
 		}
 	}
@@ -539,13 +540,13 @@ func (lex *Lexer) symbolCharacter() error {
 
 	if err := lex.moveLookAhead(); err != nil {
 		err = compiler_error.LexerErrorf("Lexer.symbolCharacter", err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
 	if err := lex.multiSymbolCharacter(temp); err != nil {
 		err = compiler_error.LexerErrorf("Lexer.symbolCharacter", err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
@@ -564,7 +565,7 @@ func (lex *Lexer) multiSymbolCharacter(temp rune) error {
 
 		if err := lex.moveLookAhead(); err != nil {
 			err = compiler_error.LexerErrorf("Lexer.multiSymbolCharacter", err)
-			compiler_error.LogError(err)
+			lex.logger.Error(err, nil)
 			return err
 		}
 	}
@@ -607,7 +608,7 @@ func (lex *Lexer) multiSymbolCharacter(temp rune) error {
 
 	if err != nil {
 		err = compiler_error.LexerErrorf("Lexer.multiSymbolCharacter", err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
@@ -708,7 +709,7 @@ func (lex *Lexer) quoteCharacters() error {
 
 	if err := lex.moveLookAhead(); err != nil {
 		err = compiler_error.LexerErrorf(errSalt, err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
@@ -721,7 +722,7 @@ func (lex *Lexer) quoteCharacters() error {
 
 		if err := lex.moveLookAhead(); err != nil {
 			err = compiler_error.LexerErrorf(errSalt, err)
-			compiler_error.LogError(err)
+			lex.logger.Error(err, nil)
 			return err
 		}
 
@@ -732,7 +733,7 @@ func (lex *Lexer) quoteCharacters() error {
 
 	if err := lex.moveLookAhead(); err != nil {
 		err = compiler_error.LexerErrorf("Lexer.quoteCharacters", err)
-		compiler_error.LogError(err)
+		lex.logger.Error(err, nil)
 		return err
 	}
 
