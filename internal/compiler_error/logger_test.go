@@ -81,8 +81,8 @@ func TestLogger_OutputFormat(t *testing.T) {
 	}
 
 	// Check the file info.
-	if !strings.Contains(entry.File, "log_test.go") {
-		t.Errorf("expected file to be 'log_test.go', but got '%s'", entry.File)
+	if !strings.Contains(entry.File, "logger_test.go") {
+		t.Errorf("expected file to be 'logger_test.go', but got '%s'", entry.File)
 	}
 }
 
