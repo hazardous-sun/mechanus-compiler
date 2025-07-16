@@ -9,6 +9,7 @@ import (
 )
 
 var debug bool = false
+var logger = compiler_error.New(os.Stderr, compiler_error.LevelDebug)
 
 func main() {
 	// Collect source and output files
@@ -21,11 +22,11 @@ func main() {
 	defer func() {
 		if err := sourceFile.Close(); err != nil {
 			err = compiler_error.FileErrorf(errSalt, err)
-			compiler_error.LogError(err)
+			logger.Fatal(err, nil)
 		}
 		if err := outputFile.Close(); err != nil {
 			err = compiler_error.FileErrorf(errSalt, err)
-			compiler_error.LogError(err)
+			logger.Fatal(err, nil)
 		}
 	}()
 
@@ -54,7 +55,7 @@ func getFiles() (*os.File, *os.File, error) {
 
 	if err != nil {
 		err = compiler_error.FileErrorf("getFiles", err)
-		compiler_error.LogError(err)
+		logger.Error(err, nil)
 		return nil, nil, err
 	}
 
@@ -63,7 +64,7 @@ func getFiles() (*os.File, *os.File, error) {
 
 	if err != nil {
 		err = compiler_error.FileErrorf("getFiles", err)
-		compiler_error.LogError(err)
+		logger.Error(err, nil)
 		return nil, nil, err
 	}
 
@@ -82,7 +83,7 @@ func getFilePaths() ([]string, error) {
 	// Check if required flags are provided
 	if *inputFile == "" {
 		err := compiler_error.FileErrorf("getFilePaths", fmt.Errorf(compiler_error.NoSourceFile))
-		compiler_error.LogError(err)
+		logger.Error(err, nil)
 		return nil, err
 	}
 
