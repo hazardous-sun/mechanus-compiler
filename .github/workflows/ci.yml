@@ -1,0 +1,50 @@
+name: Mechanus Compiler CI
+
+# --- Triggers ---
+# This workflow runs on pushes and pull requests to the main branch
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# --- Jobs ---
+jobs:
+  build-and-test:
+    # Use the latest version of Ubuntu to run the job
+    runs-on: ubuntu-latest
+
+    steps:
+      # --- Step 1: Check out the repository code ---
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --- Step 2: Set up the Go environment ---
+      # It uses the Go version specified in your go.mod file
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24' # From go.mod file
+
+      # --- Step 3: Create the output directory ---
+      # The compiler needs this directory to exist before running
+      - name: Create output directory
+        run: mkdir -p output
+
+      # --- Step 4: Compile all examples and check for failures ---
+      # This step iterates through all example files and runs the compiler.
+      # GitHub Actions runs this script with a setting that causes it to
+      # fail immediately if any command exits with a non-zero status.
+      - name: Compile all examples and check exit codes
+        run: |
+          for file in docs/examples/example*_input.mecha; do
+            echo "--- 🚀 Compiling $file ---"
+          
+            # Define a unique output file name based on the input
+            output_file="output/$(basename "$file" _input.mecha)_workflow_output.txt"
+          
+            # Run the compiler
+            go run ./cmd/mecha/main.go -i "$file" -o "$output_file"
+          done
+          
+          echo "--- ✅ All examples compiled successfully ---"
