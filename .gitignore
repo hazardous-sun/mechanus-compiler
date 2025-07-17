@@ -9,6 +9,9 @@
 !.github/
 !.github/*
 
+!.github/workflows/
+!.github/workflows/*
+
 !cmd/
 !cmd/*
 
