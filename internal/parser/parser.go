@@ -3,7 +3,7 @@ package parser
 import (
 	"fmt"
 	"mechanus-compiler/internal/compiler_error"
-	lexer2 "mechanus-compiler/internal/lexer"
+	"mechanus-compiler/internal/lexer"
 	"os"
 	"strings"
 )
@@ -12,8 +12,9 @@ import (
 // This is the structure responsible for making the syntactical analysis of the source file. It checks for unrecognized
 // syntaxes and, if it finds one, it returns an error code.
 type Parser struct {
-	debug           bool
-	lexer           lexer2.Lexer
+	logger          *compiler_error.Logger
+	debug           bool // Restored for controlling debug-specific output
+	lexer           lexer.Lexer
 	outputFile      *os.File
 	token           int
 	lexeme          string
@@ -35,22 +36,27 @@ const (
 //
 // Fails if it is not possible to initialize the lexer.
 func NewParser(inputFile, outputFile *os.File, debug bool) (Parser, error) {
-	// Initialize the Lexer
-	lexer, err := lexer2.NewLexer(inputFile, outputFile, debug)
-	errSalt := "NewParser"
+	// Initialize the logger. Log to Stderr. Set level based on the debug flag.
+	logLevel := compiler_error.LevelInfo
+	if debug {
+		logLevel = compiler_error.LevelDebug
+	}
+	lg := compiler_error.New(os.Stderr, logLevel)
 
+	// Initialize the Lexer
+	lex, err := lexer.NewLexer(inputFile, outputFile, debug)
 	if err != nil {
-		err = compiler_error.SyntaxErrorf(errSalt, err)
-		compiler_error.LogError(err)
+		// The lexer's constructor will have already logged the error.
 		return Parser{}, err
 	}
 
 	// Initialize the structure
 	parser := Parser{
-		debug:        debug,
-		lexer:        lexer,
+		logger:       lg,
+		debug:        debug, // Set the debug flag
+		lexer:        lex,
 		outputFile:   outputFile,
-		token:        lexer2.TNilValue,
+		token:        lexer.TNilValue,
 		errorMessage: nil,
 	}
 
@@ -62,64 +68,59 @@ func NewParser(inputFile, outputFile *os.File, debug bool) (Parser, error) {
 //
 // Fails if the lexer fails or if a syntactical error is found.
 func (parser *Parser) Run() error {
-	errSalt := "Parser.Run"
-
 	if err := parser.advanceToken(); err != nil {
-		err = compiler_error.SyntaxErrorf(errSalt, err)
-		compiler_error.LogError(err)
+		// The lexer logs its own errors, so we just propagate the error up.
 		return err
 	}
 
 	if err := parser.g(); err != nil {
-		err = compiler_error.SyntaxErrorf(errSalt, err)
-		compiler_error.LogError(err)
+		// Parsing functions log their own errors via handleSyntaxError.
 		return err
 	}
 
-	compiler_error.LogSuccess(compiler_error.SyntaxSuccess)
+	parser.logger.Info(compiler_error.SyntaxSuccess, nil)
 	return nil
 }
 
 // g :
 // <G> ::= '{' <BODY> '}' <ID> 'Construct'
 func (parser *Parser) g() error {
-	errSalt := "Parser.g"
 	parser.accumulateRule("<G> ::= '{' <BODY> '}' <ID> 'Construct'")
 
 	// Expect 'Construct'
-	if parser.token != lexer2.TConstruct {
+	if parser.token != lexer.TConstruct {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'Construct', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <ID>
-	if parser.token != lexer2.TId {
+	if parser.token != lexer.TId {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedIdentifier, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '}'
-	if parser.token != lexer2.TCloseBraces {
+	if parser.token != lexer.TCloseBraces {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <BODY>
 	if err := parser.body(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '{'
-	if parser.token != lexer2.TOpenBraces {
+	if parser.token != lexer.TOpenBraces {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
@@ -127,7 +128,7 @@ func (parser *Parser) g() error {
 		if strings.Contains(err.Error(), compiler_error.EndOfFileReached) {
 			return nil
 		}
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil
@@ -140,66 +141,65 @@ func (parser *Parser) g() error {
 // <BODY> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' ')' <ID> 'Architect'
 // <BODY> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS_DECL> ')' <ID> 'Architect'
 func (parser *Parser) body() error {
-	errSalt := "Parser.body"
 	parser.accumulateRule("<BODY> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' | ...")
 
 	// 1. Expect 'Architect'
-	if parser.token != lexer2.TArchitect {
+	if parser.token != lexer.TArchitect {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'Architect', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 2. Expect <ID>
-	if parser.token != lexer2.TId {
+	if parser.token != lexer.TId {
 		return parser.handleSyntaxError(fmt.Errorf("expected ID after Architect, got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 3. Expect ')'
-	if parser.token != lexer2.TCloseParentheses {
+	if parser.token != lexer.TCloseParentheses {
 		return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 4. Optionally parse <PARAMETERS> (may be ε)
-	if parser.token != lexer2.TOpenParentheses {
+	if parser.token != lexer.TOpenParentheses {
 		_ = parser.parametersDecl() // fail silently if no parametersDecl
 	}
 
-	// 5. Expect '('
-	if parser.token != lexer2.TOpenParentheses {
+	// 5. Expect ')'
+	if parser.token != lexer.TOpenParentheses {
 		return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 6. Expect '}'
-	if parser.token != lexer2.TCloseBraces {
+	if parser.token != lexer.TCloseBraces {
 		return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 7. Parse <CMDS>
 	if err := parser.cmds(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 8. Expect '{'
-	if parser.token != lexer2.TOpenBraces {
+	if parser.token != lexer.TOpenBraces {
 		return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
 	}
 	parser.displayToken()
@@ -207,7 +207,7 @@ func (parser *Parser) body() error {
 		if strings.Contains(err.Error(), compiler_error.EndOfFileReached) {
 			return nil
 		}
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 9. Recursively parse any additional Architect bodies
@@ -215,7 +215,7 @@ func (parser *Parser) body() error {
 		if strings.Contains(err.Error(), compiler_error.EndOfFileReached) {
 			return nil
 		}
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil
@@ -227,77 +227,76 @@ func (parser *Parser) body() error {
 // <BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' <TYPE> '(' <PARAMETERS_DECL> ')' <ID> 'Architect'
 // <BODY_REST> ::= ε
 func (parser *Parser) bodyRest() error {
-	errSalt := "Parser.bodyRest"
 	parser.accumulateRule("<BODY_REST> ::= <BODY_REST> '{' <CMDS> '}' '(' <PARAMETERS> ')' <ID> 'Architect' | ... | ε")
 
 	// 1. Base case: ε
-	if parser.token == lexer2.TCloseBraces || parser.token == lexer2.TInputEnd {
+	if parser.token == lexer.TCloseBraces || parser.token == lexer.TInputEnd {
 		parser.accumulateRule("<BODY_REST> ::= ε")
 		return nil
 	}
 
 	// 2. Expect 'Architect'
-	if parser.token != lexer2.TArchitect {
+	if parser.token != lexer.TArchitect {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'Architect', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 3. Expect <ID>
-	if parser.token != lexer2.TId {
+	if parser.token != lexer.TId {
 		return parser.handleSyntaxError(fmt.Errorf("expected ID after Architect, got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 4. Expect ')'
-	if parser.token != lexer2.TCloseParentheses {
+	if parser.token != lexer.TCloseParentheses {
 		return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 5. Optionally parse <PARAMETERS>
-	if parser.token != lexer2.TOpenParentheses {
+	if parser.token != lexer.TOpenParentheses {
 		_ = parser.parametersDecl() // fails silently if epsilon
 	}
 
-	// 6. Expect '('
-	if parser.token != lexer2.TOpenParentheses {
+	// 6. Expect ')'
+	if parser.token != lexer.TOpenParentheses {
 		return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 7. Expect '}'
-	if parser.token != lexer2.TCloseBraces {
+	if parser.token != lexer.TCloseBraces {
 		return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 8. Parse <CMDS>
 	if err := parser.cmds(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 9. Expect '{'
-	if parser.token != lexer2.TOpenBraces {
+	if parser.token != lexer.TOpenBraces {
 		return parser.handleSyntaxError(fmt.Errorf("expected '{', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// 10. Recurse to parse next body
@@ -314,8 +313,8 @@ func (parser *Parser) bodyRest() error {
 // <TYPE> ::= 'Omnidrone'
 func (parser *Parser) typeToken() error {
 	parser.accumulateRule("<TYPE> ::= 'Nil' | 'Gear' | 'Tensor' | 'State' | 'Monodrone' | 'Omnidrone'")
-	if parser.token != lexer2.TNil && parser.token != lexer2.TGear && parser.token != lexer2.TTensor &&
-		parser.token != lexer2.TState && parser.token != lexer2.TMonodrone && parser.token != lexer2.TOmnidrone {
+	if parser.token != lexer.TNil && parser.token != lexer.TGear && parser.token != lexer.TTensor &&
+		parser.token != lexer.TState && parser.token != lexer.TMonodrone && parser.token != lexer.TOmnidrone {
 		return parser.handleSyntaxError(fmt.Errorf("expected a Type keyword, got %s", parser.lexeme))
 	}
 	parser.displayToken()
@@ -332,7 +331,7 @@ func (parser *Parser) cmds() error {
 
 	for {
 		// Skip any newlines
-		for parser.token == lexer2.TNewLine {
+		for parser.token == lexer.TNewLine {
 			parser.displayToken()
 			if err := parser.advanceToken(); err != nil {
 				return err
@@ -340,7 +339,7 @@ func (parser *Parser) cmds() error {
 		}
 
 		// At this level, hitting '{' means the parser is done with <CMDS>
-		if parser.token == lexer2.TOpenBraces {
+		if parser.token == lexer.TOpenBraces {
 			break
 		}
 
@@ -360,7 +359,7 @@ func (parser *Parser) cmds() error {
 func (parser *Parser) cmdsRest() error {
 	parser.accumulateRule("<CMDS_REST> ::= '\\n' <CMDS> | ε")
 
-	if parser.token == lexer2.TNewLine {
+	if parser.token == lexer.TNewLine {
 		if err := parser.advanceToken(); err != nil {
 			return err
 		}
@@ -381,7 +380,6 @@ func (parser *Parser) cmdsRest() error {
 // <CMD> ::= <CMD_SEND>
 // <CMD> ::= <CMD_INTEGRATE>
 func (parser *Parser) cmd() error {
-	errSalt := "Parser.cmd"
 	parser.accumulateRule("<CMD> ::= <CMD_IF> | <CMD_FOR> | <CMD_DECLARATION> | <CMD_ASSIGNMENT> | <CMD_RECEIVE> | <CMD_SEND> | <CMD_INTEGRATE> | <CMD_CALL>")
 
 	if err := parser.cmdIf(); err == nil {
@@ -406,12 +404,12 @@ func (parser *Parser) cmd() error {
 		return nil
 	}
 
-	if parser.token == lexer2.TCloseParentheses {
+	if parser.token == lexer.TCloseParentheses {
 		parser.accumulateRule("<CMD_CALL> ::= '(' <PARAMETERS_CALL> ')' <ID>")
 
 		// Parse parameters
 		if err := parser.parametersCall(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		return nil
@@ -427,78 +425,77 @@ func (parser *Parser) cmd() error {
 // <CMD_IF> ::= '{' <CMDS> '}' 'else' '{' <CMDS> '}' <CONDITION> 'if'
 // <CMD_IF> ::= <CMD_ELIF> '{' <CMDS> '}' <CONDITION> 'if'
 func (parser *Parser) cmdIf() error {
-	errSalt := "Parser.cmdIf"
 	parser.accumulateRule("<CMD_IF> ::= '{' <CMDS> '}' 'if' <CONDITION> | '{' <CMDS> '}' 'else' '{' <CMDS> '}' 'if' <CONDITION> | <CMD_ELIF> '{' <CMDS> '}' 'if' <CONDITION>")
 
 	// Expect 'if'
-	if parser.token != lexer2.TIf {
+	if parser.token != lexer.TIf {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'if', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <CONDITION>
 	if err := parser.condition(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '}'
-	if parser.token != lexer2.TCloseBraces {
+	if parser.token != lexer.TCloseBraces {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <CMDS>
 	if err := parser.cmds(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '{'
-	if parser.token != lexer2.TOpenBraces {
+	if parser.token != lexer.TOpenBraces {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Check for 'elif'
-	for parser.token == lexer2.TElif {
+	for parser.token == lexer.TElif {
 		if err := parser.cmdElif(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 	}
 
 	// Check for 'else'
-	if parser.token == lexer2.TElse {
+	if parser.token == lexer.TElse {
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		// Expect '}' after 'else' block
-		if parser.token != lexer2.TCloseBraces {
+		if parser.token != lexer.TCloseBraces {
 			return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		// Expect <CMDS> for 'else' block
 		if err := parser.cmds(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		// Expect '{' for 'else' block
-		if parser.token != lexer2.TOpenBraces {
+		if parser.token != lexer.TOpenBraces {
 			return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 	}
 
@@ -510,46 +507,45 @@ func (parser *Parser) cmdIf() error {
 // <CMD_ELIF> ::= '{' <CMDS> '}' <CONDITION> 'elif'
 // <CMD_ELIF> ::= <CMD_ELIF_REST>
 func (parser *Parser) cmdElif() error {
-	errSalt := "Parser.cmdElif"
 	parser.accumulateRule("<CMD_ELIF> ::= '{' <CMDS> '}' 'elif' <CONDITION> | <CMD_ELIF_REST>")
 
 	// If the current token is TElif, it's a direct elif. Otherwise, it must be CMD_ELIF_REST.
-	if parser.token != lexer2.TElif {
+	if parser.token != lexer.TElif {
 		return parser.cmdElifRest()
 	}
 
 	// Expect 'elif'
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <CONDITION>
 	if err := parser.condition(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '}'
-	if parser.token != lexer2.TCloseBraces {
+	if parser.token != lexer.TCloseBraces {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <CMDS>
 	if err := parser.cmds(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '{'
-	if parser.token != lexer2.TOpenBraces {
+	if parser.token != lexer.TOpenBraces {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil
@@ -561,11 +557,10 @@ func (parser *Parser) cmdElif() error {
 // <CMD_ELIF_REST> ::= '{' <CMDS> '}' 'else' <CMD_ELIF_REST> '{' <CMDS> '}' <CONDITION> 'elif'
 // <CMD_ELIF_REST> ::= ε
 func (parser *Parser) cmdElifRest() error {
-	errSalt := "Parser.cmdElifRest"
 	parser.accumulateRule("<CMD_ELIF_REST> ::= '{' <CMDS> '}' 'elif' <CONDITION> <CMD_ELIF_REST> | '{' <CMDS> '}' 'else' '{' <CMDS> '}' 'elif' <CONDITION> <CMD_ELIF_REST> | ε")
 
 	// If the next token is not 'elif', it's epsilon.
-	if parser.token != lexer2.TElif {
+	if parser.token != lexer.TElif {
 		parser.accumulateRule("<CMD_ELIF_REST> ::= ε")
 		return nil
 	}
@@ -573,68 +568,68 @@ func (parser *Parser) cmdElifRest() error {
 	// Expect 'elif'
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <CONDITION>
 	if err := parser.condition(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '}'
-	if parser.token != lexer2.TCloseBraces {
+	if parser.token != lexer.TCloseBraces {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <CMDS>
 	if err := parser.cmds(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '{'
-	if parser.token != lexer2.TOpenBraces {
+	if parser.token != lexer.TOpenBraces {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Check for 'else'
-	if parser.token == lexer2.TElse {
+	if parser.token == lexer.TElse {
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		// Expect '}' after 'else' block
-		if parser.token != lexer2.TCloseBraces {
+		if parser.token != lexer.TCloseBraces {
 			return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseBraces, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		// Expect <CMDS> for 'else' block
 		if err := parser.cmds(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		// Expect '{' for 'else' block
-		if parser.token != lexer2.TOpenBraces {
+		if parser.token != lexer.TOpenBraces {
 			return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 	}
 
 	// Recursive call for CMD_ELIF_REST
 	if err := parser.cmdElifRest(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil
@@ -643,44 +638,43 @@ func (parser *Parser) cmdElifRest() error {
 // <CMD_FOR> :
 // <CMD_FOR> ::= '{' <CMDS> '}' <CONDITION> 'for'
 func (parser *Parser) cmdFor() error {
-	errSalt := "Parser.cmdFor"
 	parser.accumulateRule("<CMD_FOR> ::= '{' <CMDS> '}' <CONDITION> 'for'")
 
 	// Expect 'for'
-	if parser.token != lexer2.TFor {
+	if parser.token != lexer.TFor {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'for', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <CONDITION>
 	if err := parser.condition(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '}'
-	if parser.token != lexer2.TCloseBraces {
+	if parser.token != lexer.TCloseBraces {
 		return parser.handleSyntaxError(fmt.Errorf("expected '}', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <CMDS>
 	if err := parser.cmds(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '{'
-	if parser.token != lexer2.TOpenBraces {
+	if parser.token != lexer.TOpenBraces {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenBraces, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil
@@ -690,21 +684,20 @@ func (parser *Parser) cmdFor() error {
 //
 // <CMD_INTEGRATE> ::= <E> 'Integrate'
 func (parser *Parser) cmdIntegrate() error {
-	errSalt := "Parser.cmdIntegrate"
 	parser.accumulateRule("<CMD_INTEGRATE> ::= <E> 'Integrate'")
 
 	// Expect 'Integrate'
-	if parser.token != lexer2.TIntegrate {
+	if parser.token != lexer.TIntegrate {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'Integrate', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <E>
 	if err := parser.e(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil
@@ -714,40 +707,39 @@ func (parser *Parser) cmdIntegrate() error {
 //
 // <CMD_DECLARATION> ::= <E> '=:' <TYPE> ':' <VAR>
 func (parser *Parser) cmdDeclaration() error {
-	errSalt := "Parser.cmdDeclaration"
 	parser.accumulateRule("<CMD_DECLARATION> ::= <E> '=:' <TYPE> ':' <VAR>")
 
 	// Expect <VAR>
 	if err := parser.varToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect ':'
-	if parser.token != lexer2.TColon {
+	if parser.token != lexer.TColon {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedColon, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <TYPE>
 	if err := parser.typeToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '=:'
-	if parser.token != lexer2.TDeclarationOperator {
+	if parser.token != lexer.TDeclarationOperator {
 		return parser.handleSyntaxError(fmt.Errorf("expected '=:', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <E>
 	if err := parser.e(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil
@@ -756,27 +748,29 @@ func (parser *Parser) cmdDeclaration() error {
 // <CMD_ASSIGNMENT> :
 //
 // <CMD_ASSIGNMENT> ::= <E> '=' <VAR>
+// <CMD_ASSIGNMENT> :
+//
+// <CMD_ASSIGNMENT> ::= <E> '=' <VAR>
 func (parser *Parser) cmdAssignment() error {
-	errSalt := "Parser.cmdAssignment"
 	parser.accumulateRule("<CMD_ASSIGNMENT> ::= <E> '=' <VAR>")
 
 	// Expect <VAR>
 	if err := parser.varToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect '='
-	if parser.token != lexer2.TAttributionOperator {
+	if parser.token != lexer.TAttributionOperator {
 		return parser.handleSyntaxError(fmt.Errorf("expected '=', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <E>
 	if err := parser.e(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil
@@ -786,39 +780,38 @@ func (parser *Parser) cmdAssignment() error {
 //
 // <CMD_RECEIVE> ::= '(' <VAR> ')' 'Receive'
 func (parser *Parser) cmdReceive() error {
-	errSalt := "Parser.cmdReceive"
 	parser.accumulateRule("<CMD_RECEIVE> ::= '(' <VAR> ')' 'Receive'")
 
 	// Expect 'Receive'
-	if parser.token != lexer2.TReceive {
+	if parser.token != lexer.TReceive {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'Receive', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect ')'
-	if parser.token != lexer2.TCloseParentheses {
+	if parser.token != lexer.TCloseParentheses {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedCloseParenthesis, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <VAR>
 	if err := parser.varToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
-	// Expect '('
-	if parser.token != lexer2.TOpenParentheses {
+	// Expect ')'
+	if parser.token != lexer.TOpenParentheses {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedOpenParenthesis, parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil
@@ -831,7 +824,7 @@ func (parser *Parser) cmdSend() error {
 	parser.accumulateRule("<CMD_SEND> ::= '(' <E> ')' 'Send'")
 
 	// Expect TSend (first, since lexing is bottom-up, right-to-left)
-	if parser.token != lexer2.TSend {
+	if parser.token != lexer.TSend {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'Send', got %s", parser.lexeme))
 	}
 	parser.displayToken()
@@ -840,7 +833,7 @@ func (parser *Parser) cmdSend() error {
 	}
 
 	// Expect TCloseParentheses
-	if parser.token != lexer2.TCloseParentheses {
+	if parser.token != lexer.TCloseParentheses {
 		return parser.handleSyntaxError(fmt.Errorf("expected ')', got %s", parser.lexeme))
 	}
 	parser.displayToken()
@@ -854,7 +847,7 @@ func (parser *Parser) cmdSend() error {
 	}
 
 	// Expect TOpenParentheses
-	if parser.token != lexer2.TOpenParentheses {
+	if parser.token != lexer.TOpenParentheses {
 		return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
 	}
 	parser.displayToken()
@@ -874,32 +867,31 @@ func (parser *Parser) cmdSend() error {
 // <CONDITION> ::= <E> '<' <E>
 // <CONDITION> ::= <E> '==' <E>
 func (parser *Parser) condition() error {
-	errSalt := "Parser.condition"
 	parser.accumulateRule("<CONDITION> ::= <E> '>' <E> | <E> '>=' <E> | <E> '<>' <E> | <E> '<=' <E> | <E> '<' <E> | <E> '==' <E>")
 
 	// All conditions are of the form <E> OPERATOR <E>
 	// Parse the second <E> (rightmost) first
 	if err := parser.e(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect a comparison operator
-	if parser.token != lexer2.TGreaterThanOperator &&
-		parser.token != lexer2.TGreaterEqualOperator &&
-		parser.token != lexer2.TLessThanOperator &&
-		parser.token != lexer2.TLessEqualOperator &&
-		parser.token != lexer2.TNotEqualOperator &&
-		parser.token != lexer2.TEqualOperator {
+	if parser.token != lexer.TGreaterThanOperator &&
+		parser.token != lexer.TGreaterEqualOperator &&
+		parser.token != lexer.TLessThanOperator &&
+		parser.token != lexer.TLessEqualOperator &&
+		parser.token != lexer.TNotEqualOperator &&
+		parser.token != lexer.TEqualOperator {
 		return parser.handleSyntaxError(fmt.Errorf("expected a comparison operator, got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Parse the first <E> (leftmost)
 	if err := parser.e(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return nil
@@ -908,11 +900,10 @@ func (parser *Parser) condition() error {
 // <E> :
 // <E> ::= <E_REST> <T>
 func (parser *Parser) e() error {
-	errSalt := "Parser.e"
 	parser.accumulateRule("<E> ::= <T> <E_REST>")
 
 	if err := parser.t(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 	return parser.eRest()
 }
@@ -922,16 +913,14 @@ func (parser *Parser) e() error {
 // <E_REST> ::= <E_REST> '-' <T>
 // <E_REST> ::= ε
 func (parser *Parser) eRest() error {
-	errSalt := "Parser.eRest"
-
 	switch parser.token {
-	case lexer2.TAdditionOperator, lexer2.TSubtractionOperator:
+	case lexer.TAdditionOperator, lexer.TSubtractionOperator:
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		if err := parser.t(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		return parser.eRest() // recursive continuation
 	default:
@@ -943,11 +932,10 @@ func (parser *Parser) eRest() error {
 
 // <T> :
 func (parser *Parser) t() error {
-	errSalt := "Parser.t"
 	parser.accumulateRule("<T> ::= <F> <T_REST>")
 
 	if err := parser.f(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	return parser.tRest()
@@ -955,16 +943,14 @@ func (parser *Parser) t() error {
 
 // <T_REST>
 func (parser *Parser) tRest() error {
-	errSalt := "Parser.tRest"
-
 	switch parser.token {
-	case lexer2.TMultiplicationOperator, lexer2.TDivisionOperator, lexer2.TModuleOperator:
+	case lexer.TMultiplicationOperator, lexer.TDivisionOperator, lexer.TModuleOperator:
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		if err := parser.f(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		return parser.tRest() // recursive continuation
 	default:
@@ -976,20 +962,19 @@ func (parser *Parser) tRest() error {
 
 // <F>
 func (parser *Parser) f() error {
-	errSalt := "Parser.f"
 	parser.accumulateRule("<F> ::= -<F> | <X>")
 
-	if parser.token == lexer2.TSubtractionOperator {
+	if parser.token == lexer.TSubtractionOperator {
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 		if err := parser.f(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 	} else {
 		if err := parser.x(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 	}
 	return nil
@@ -997,50 +982,49 @@ func (parser *Parser) f() error {
 
 // <X> :
 func (parser *Parser) x() error {
-	errSalt := "Parser.x"
 	parser.accumulateRule("<X> ::= '(' <E> ')' | [0-9]+('.'[0-9]+) | <STRING> | <NIL> | <VAR> | '(' <PARAMETERS_CALL> ')' <ID>")
 
 	switch parser.token {
 
 	// Case: STRING literal
-	case lexer2.TDoubleQuote:
+	case lexer.TDoubleQuote:
 		parser.displayToken()
 		return parser.advanceToken()
 
 	// Case: NIL
-	case lexer2.TNil:
+	case lexer.TNil:
 		parser.displayToken()
 		return parser.advanceToken()
 
 	// Case: numeric literal (integer or float)
-	case lexer2.TGear, lexer2.TTensor:
+	case lexer.TGear, lexer.TTensor:
 		parser.displayToken()
 		return parser.advanceToken()
 
 	// Case: identifier (variable or function call)
-	case lexer2.TId:
+	case lexer.TId:
 		parser.displayToken()
 		return parser.advanceToken()
 
 	// Case: open parentheses — could be (E) or (PARAMS_CALL) ID
-	case lexer2.TCloseParentheses:
+	case lexer.TCloseParentheses:
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		// Try to parse parametersCall (supports multiple expressions)
 		if err := parser.parametersCall(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		// Expect matching opening parenthesis
-		if parser.token != lexer2.TOpenParentheses {
+		if parser.token != lexer.TOpenParentheses {
 			return parser.handleSyntaxError(fmt.Errorf("expected '(', got %s", parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		return nil
@@ -1053,7 +1037,7 @@ func (parser *Parser) x() error {
 func (parser *Parser) nilToken() error {
 	parser.accumulateRule("<NIL> :: 'Nil'")
 
-	if parser.token != lexer2.TNil {
+	if parser.token != lexer.TNil {
 		return parser.handleSyntaxError(fmt.Errorf("expected 'Nil', got %s", parser.lexeme))
 	}
 	parser.displayToken()
@@ -1071,7 +1055,7 @@ func (parser *Parser) stringToken() error {
 
 	// The lexer identifies the entire string literal (including quotes) as TDoubleQuote.
 	// So, the parser just needs to consume the TDoubleQuote
-	if parser.token != lexer2.TDoubleQuote {
+	if parser.token != lexer.TDoubleQuote {
 		return parser.handleSyntaxError(fmt.Errorf("expected a string literal, got %s", parser.lexeme))
 	}
 	parser.displayToken()
@@ -1085,11 +1069,10 @@ func (parser *Parser) stringToken() error {
 //
 // <VAR> ::= <ID>
 func (parser *Parser) varToken() error {
-	errSalt := "Parser.varToken"
 	parser.accumulateRule("<VAR> ::= <ID>")
 
 	if err := parser.id(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 	return nil
 }
@@ -1099,7 +1082,7 @@ func (parser *Parser) varToken() error {
 // <ID> ::= (([A-Z]|[a-z])+(_|[0-9])*)+
 func (parser *Parser) id() error {
 	parser.accumulateRule("<ID> ::= (([A-Z]|[a-z])+(_|[0-9])*)+")
-	if parser.token != lexer2.TId {
+	if parser.token != lexer.TId {
 		return parser.handleSyntaxError(fmt.Errorf(errExpectedIdentifier, parser.lexeme))
 	}
 	parser.displayToken()
@@ -1116,60 +1099,59 @@ func (parser *Parser) id() error {
 // <EXTRA_PARAMETERS_CALL> ::= <E> ','
 // <EXTRA_PARAMETERS_CALL> ::= <EXTRA_PARAMETERS_CALL> <E> ','
 func (parser *Parser) parametersDecl() error {
-	errSalt := "Parser.parametersDecl"
 	parser.accumulateRule("<PARAMETERS> ::= <EXTRA_PARAMETERS> <TYPE> ':' <ID> | <TYPE> ':' <ID>")
 
 	// Expect ID (rightmost identifier in the parameter list)
-	if parser.token != lexer2.TId {
+	if parser.token != lexer.TId {
 		return parser.handleSyntaxError(fmt.Errorf("expected parameter ID, got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect ':'
-	if parser.token != lexer2.TColon {
+	if parser.token != lexer.TColon {
 		return parser.handleSyntaxError(fmt.Errorf("expected ':', got %s", parser.lexeme))
 	}
 	parser.displayToken()
 	if err := parser.advanceToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Expect <TYPE>
 	if err := parser.typeToken(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Loop to check for extra parametersDecl (reverse order)
-	for parser.token == lexer2.TComma {
+	for parser.token == lexer.TComma {
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		// Expect ID
-		if parser.token != lexer2.TId {
+		if parser.token != lexer.TId {
 			return parser.handleSyntaxError(fmt.Errorf("expected parameter ID, got %s", parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		// Expect ':'
-		if parser.token != lexer2.TColon {
+		if parser.token != lexer.TColon {
 			return parser.handleSyntaxError(fmt.Errorf("expected ':', got %s", parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		// Expect <TYPE>
 		if err := parser.typeToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 	}
 
@@ -1182,23 +1164,22 @@ func (parser *Parser) parametersDecl() error {
 // <PARAMETERS_CALL> ::= <EXTRA_PARAMETERS_CALL> <E>
 // <EXTRA_PARAMETERS_CALL> ::= <E> ',' | <EXTRA_PARAMETERS_CALL> <E> ','
 func (parser *Parser) parametersCall() error {
-	errSalt := "Parser.parametersCall"
 	parser.accumulateRule("<PARAMETERS_CALL> ::= <EXTRA_PARAMETERS_CALL> <E> | <E>")
 
 	// Parse rightmost expression (last param)
 	if err := parser.e(); err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		return err
 	}
 
 	// Repeatedly handle comma-separated expressions
-	for parser.token == lexer2.TComma {
+	for parser.token == lexer.TComma {
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		if err := parser.e(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 	}
 
@@ -1210,45 +1191,44 @@ func (parser *Parser) parametersCall() error {
 // <EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE>
 // <EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> ',' <PARAMETERS>
 func (parser *Parser) extraParameters() error {
-	errSalt := "Parser.extraParameters"
 	parser.accumulateRule("<EXTRA_PARAMETERS> ::= ',' <ID> ':' <TYPE> | ',' <ID> ':' <TYPE> ',' <PARAMETERS>")
 
 	// If there's a comma, it's a recursive call or a single extra parameter.
-	if parser.token == lexer2.TComma {
+	if parser.token == lexer.TComma {
 		// Consume the ','
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		// Check for <TYPE>
 		if err := parser.typeToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		// Then ':'
-		if parser.token != lexer2.TColon {
+		if parser.token != lexer.TColon {
 			return parser.handleSyntaxError(fmt.Errorf(errExpectedColon, parser.lexeme))
 		}
 		parser.displayToken()
 		if err := parser.advanceToken(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		// Then <ID>
 		if err := parser.id(); err != nil {
-			return compiler_error.SyntaxErrorf(errSalt, err)
+			return err
 		}
 
 		// After matching `ID : TYPE`, if the next token is also a `TComma`, then recursively call `extraParameters`.
-		if parser.token == lexer2.TComma {
+		if parser.token == lexer.TComma {
 			// Consume the comma for the recursive call
 			parser.displayToken()
 			if err := parser.advanceToken(); err != nil {
-				return compiler_error.SyntaxErrorf(errSalt, err)
+				return err
 			}
 			if err := parser.parametersDecl(); err != nil {
-				return compiler_error.SyntaxErrorf(errSalt, err)
+				return err
 			}
 		}
 
@@ -1263,14 +1243,12 @@ func (parser *Parser) extraParameters() error {
 //
 // Fails if the lexer fails to get the next token.
 func (parser *Parser) advanceToken() error {
-	errSalt := "Parser.advanceToken"
-	if parser.debug {
-		compiler_error.LogDebug("Advancing token...")
-	}
+	parser.logger.Debug("Advancing token...", nil)
 
 	token, err := parser.lexer.NextToken()
 	if err != nil {
-		return compiler_error.SyntaxErrorf(errSalt, err)
+		// The lexer logs its own errors. We just propagate it.
+		return err
 	}
 
 	parser.token = token
@@ -1280,7 +1258,7 @@ func (parser *Parser) advanceToken() error {
 }
 
 // displayToken :
-// Displays the current token and lexeme.
+// Displays the current token and lexeme if debug mode is enabled.
 func (parser *Parser) displayToken() {
 	if parser.debug {
 		parser.lexer.DisplayToken()
@@ -1288,23 +1266,29 @@ func (parser *Parser) displayToken() {
 }
 
 // handleSyntaxError :
-// Records a syntax error and sets the error message.
+// Records and logs a syntax error, ensuring it is only logged once.
 //
 // Returns a new error of type ErrSyntax.
 func (parser *Parser) handleSyntaxError(err error) error {
 	if parser.errorMessage == nil {
-		parser.errorMessage = compiler_error.SyntaxErrorf(compiler_error.SyntaxError,
-			fmt.Errorf("%s at %s", err.Error(), parser.lexer.DisplayPos()))
-		//log.LogError(parser.errorMessage)
+		// Create the detailed error.
+		detailedErr := fmt.Errorf("%s at %s", err.Error(), parser.lexer.DisplayPos())
+		parser.errorMessage = compiler_error.SyntaxErrorf(compiler_error.SyntaxError, detailedErr)
+
+		// Log the structured error.
+		parser.logger.Error(parser.errorMessage, map[string]any{
+			"position": parser.lexer.DisplayPos(),
+			"lexeme":   parser.lexeme,
+		})
 	}
 	return parser.errorMessage
 }
 
 // accumulateRule :
-// Accumulates the recognized grammar rule for output.
+// Accumulates the recognized grammar rule for debug output.
 func (parser *Parser) accumulateRule(rule string) {
+	parser.logger.Debug("Recognized rule", map[string]any{"rule": rule})
 	if parser.debug {
-		compiler_error.LogDebug(fmt.Sprintf("Recognized rule: %s\n", rule))
 		parser.recognizedRules.WriteString(fmt.Sprintf("Recognized rule: %s\n", rule))
 	}
 }
@@ -1313,9 +1297,9 @@ func (parser *Parser) accumulateRule(rule string) {
 // Displays all recognized grammar rules.
 func (parser *Parser) ShowRecognizedRules() {
 	if parser.debug {
-		compiler_error.LogDebug("Recognized Grammar Rules:")
+		parser.logger.Debug("Showing all recognized grammar rules.", nil)
+		fmt.Println(parser.recognizedRules.String())
 	}
-	fmt.Println(parser.recognizedRules.String())
 }
 
 // Fail :
