@@ -7,73 +7,73 @@ package lexer
 const (
 	//	 Construction tokens
 
-	TConstruct   = 1
-	TArchitect   = 2
-	TIntegrate   = 3
-	TComma       = 4
-	TColon       = 5
-	TSingleQuote = 6
-	TDoubleQuote = 7
+	TConstruct = iota
+	TArchitect
+	TIntegrate
+	TComma
+	TColon
+	TSingleQuote
+	TDoubleQuote
 
 	//	 Conditional and repetition tokens
 
-	TIf     = 101
-	TElse   = 102
-	TElif   = 103
-	TFor    = 104
-	TDetach = 105
+	TIf
+	TElse
+	TElif
+	TFor
+	TDetach
 
 	//	 Structure tokens
 
-	TOpenParentheses       = 201
-	TCloseParentheses      = 202
-	TOpenBraces            = 203
-	TCloseBraces           = 204
-	TSingleLineComment     = 205
-	TOpenMultilineComment  = 206
-	TCloseMultilineComment = 207
-	TNewLine               = 208
+	TOpenParentheses
+	TCloseParentheses
+	TOpenBraces
+	TCloseBraces
+	TSingleLineComment
+	TOpenMultilineComment
+	TCloseMultilineComment
+	TNewLine
 
 	//	 Operator tokens
 
-	TGreaterThanOperator    = 301
-	TLessThanOperator       = 302
-	TGreaterEqualOperator   = 303
-	TLessEqualOperator      = 304
-	TEqualOperator          = 305
-	TNotEqualOperator       = 306
-	TAdditionOperator       = 307
-	TSubtractionOperator    = 308
-	TMultiplicationOperator = 309
-	TDivisionOperator       = 310
-	TModuleOperator         = 311
-	TAndOperator            = 312
-	TOrOperator             = 313
-	TNotOperator            = 314
-	TDeclarationOperator    = 315
-	TAttributionOperator    = 316
+	TGreaterThanOperator
+	TLessThanOperator
+	TGreaterEqualOperator
+	TLessEqualOperator
+	TEqualOperator
+	TNotEqualOperator
+	TAdditionOperator
+	TSubtractionOperator
+	TMultiplicationOperator
+	TDivisionOperator
+	TModuleOperator
+	TAndOperator
+	TOrOperator
+	TNotOperator
+	TDeclarationOperator
+	TAttributionOperator
 
 	//	 Type tokens
 
-	TNil       = 401
-	TGear      = 402
-	TTensor    = 403
-	TState     = 404
-	TMonodrone = 405
-	TOmnidrone = 406
-	TTypeName  = 407
-	TId        = 408
+	TNil
+	TGear
+	TTensor
+	TState
+	TMonodrone
+	TOmnidrone
+	TTypeName
+	TId
 
 	// Built-in functions
 
-	TSend    = 501
-	TReceive = 502
+	TSend
+	TReceive
 
 	//	 Control tokens
 
-	TInputEnd = 601
-	TLexError = 602
-	TNilValue = 603
+	TInputEnd
+	TLexError
+	TNilValue
 )
 
 //**********************************************************************************************************************
