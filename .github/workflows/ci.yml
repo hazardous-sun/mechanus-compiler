@@ -1,17 +1,13 @@
 name: Mechanus Compiler CI
 
-# --- Triggers ---
-# This workflow runs on pushes and pull requests to the main branch
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 
-# --- Jobs ---
 jobs:
   build-and-test:
-    # Use the latest version of Ubuntu to run the job
     runs-on: ubuntu-latest
 
     steps:
@@ -20,14 +16,12 @@ jobs:
         uses: actions/checkout@v4
 
       # --- Step 2: Set up the Go environment ---
-      # It uses the Go version specified in your go.mod file
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24' # From go.mod file
+          go-version: '1.24'
 
       # --- Step 3: Create the output directory ---
-      # The compiler needs this directory to exist before running
       - name: Create output directory
         run: mkdir -p output
 
