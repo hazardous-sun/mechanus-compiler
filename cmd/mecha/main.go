@@ -4,12 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"mechanus-compiler/internal/compiler_error"
+	logger2 "mechanus-compiler/internal/logger"
 	"mechanus-compiler/internal/parser"
 	"os"
 )
 
 var debug bool = false
-var logger = compiler_error.New(os.Stderr, compiler_error.LevelDebug)
+var logger = logger2.New(os.Stderr, logger2.LevelDebug)
 
 func main() {
 	// Collect source and output files

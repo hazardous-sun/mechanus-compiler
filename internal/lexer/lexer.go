@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"mechanus-compiler/internal/compiler_error"
+	"mechanus-compiler/internal/logger"
 	"os"
 	"strings"
 )
@@ -12,7 +13,7 @@ import (
 // This is the structure responsible for making the lexical analysis of the source file. It checks for unrecognized
 // lexemes and, if it finds one, it returns an error code.
 type Lexer struct {
-	logger           *compiler_error.Logger
+	logger           *logger.Logger
 	inputFile        *os.File
 	lines            []string
 	outputFile       *os.File
@@ -39,11 +40,11 @@ type Lexer struct {
 // Fails if it is not possible to read the source file.
 func NewLexer(inputFile, outputFile *os.File, debug bool) (Lexer, error) {
 	// Initialize the logger. Log to Stderr. Set level based on the debug flag.
-	logLevel := compiler_error.LevelInfo
+	logLevel := logger.LevelInfo
 	if debug {
-		logLevel = compiler_error.LevelDebug
+		logLevel = logger.LevelDebug
 	}
-	lg := compiler_error.New(os.Stderr, logLevel)
+	lg := logger.New(os.Stderr, logLevel)
 
 	// Initialize the structure
 	lex := Lexer{

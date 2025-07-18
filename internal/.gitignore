@@ -6,5 +6,8 @@
 !lexer/
 !lexer/*
 
+!logger/
+!logger/*
+
 !parser/
 !parser/*

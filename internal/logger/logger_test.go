@@ -1,4 +1,4 @@
-package compiler_error
+package logger
 
 import (
 	"bytes"

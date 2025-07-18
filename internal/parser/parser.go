@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mechanus-compiler/internal/compiler_error"
 	"mechanus-compiler/internal/lexer"
+	"mechanus-compiler/internal/logger"
 	"os"
 	"strings"
 )
@@ -12,7 +13,7 @@ import (
 // This is the structure responsible for making the syntactical analysis of the source file. It checks for unrecognized
 // syntaxes and, if it finds one, it returns an error code.
 type Parser struct {
-	logger          *compiler_error.Logger
+	logger          *logger.Logger
 	debug           bool // Restored for controlling debug-specific output
 	lexer           lexer.Lexer
 	outputFile      *os.File
@@ -37,11 +38,11 @@ const (
 // Fails if it is not possible to initialize the lexer.
 func NewParser(inputFile, outputFile *os.File, debug bool) (Parser, error) {
 	// Initialize the logger. Log to Stderr. Set level based on the debug flag.
-	logLevel := compiler_error.LevelInfo
+	logLevel := logger.LevelInfo
 	if debug {
-		logLevel = compiler_error.LevelDebug
+		logLevel = logger.LevelDebug
 	}
-	lg := compiler_error.New(os.Stderr, logLevel)
+	lg := logger.New(os.Stderr, logLevel)
 
 	// Initialize the Lexer
 	lex, err := lexer.NewLexer(inputFile, outputFile, debug)
