@@ -1,6 +1,8 @@
 # Mechanus Compiler
 
 [![Build](https://github.com/hazardous-sun/mechanus-compiler/actions/workflows/build.yml/badge.svg)](https://github.com/hazardous-sun/mechanus-compiler/actions/workflows/build.yml)
+[![⚙️ CI](https://github.com/hazardous-sun/mechanus-compiler/actions/workflows/ci.yml/badge.svg)](https://github.com/hazardous-sun/mechanus-compiler/actions/workflows/ci.yml)
+[![🚀 CD](https://github.com/hazardous-sun/mechanus-compiler/actions/workflows/cd.yml/badge.svg)](https://github.com/hazardous-sun/mechanus-compiler/actions/workflows/cd.yml)
 
 > "Mechanus is unnatural — bottom-to-top, left-to-right."  
 > — The Architect
