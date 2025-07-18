@@ -1,4 +1,4 @@
-name: Mechanus Compiler CI
+name: ⚙️ CI
 
 on:
   push:
