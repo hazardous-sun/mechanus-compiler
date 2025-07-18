@@ -1,9 +1,13 @@
 name: 🚀 CD
 
 on:
+  # Trigger automatically when a new version tag is pushed
   push:
     tags:
       - 'v*.*.*'
+
+  # Allow manual runs from the Actions tab in GitHub
+  workflow_dispatch:
 
 permissions:
   contents: write
