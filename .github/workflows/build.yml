@@ -1,7 +1,4 @@
-# build
-# This workflow builds the project and runs all unit tests for the compiler.
-
-name: Build
+name: 🛠️ Build
 
 on:
   push:
